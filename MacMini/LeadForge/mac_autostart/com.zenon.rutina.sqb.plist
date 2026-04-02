@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- ═══════════════════════════════════════════════════════════
+       Rutina SQB — Enriquecimiento automático + deduplicación
+       Corre: Lunes, Miércoles y Viernes a las 2:00 AM
+       Log: ~/LeadForge/logs/rutina_sqb.log
+       ═══════════════════════════════════════════════════════════ -->
+
+  <key>Label</key>
+  <string>com.zenon.rutina.sqb</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/macmini/LeadForge/venv/bin/python</string>
+    <string>/Users/macmini/LeadForge/rutina_sqb.py</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/macmini/LeadForge</string>
+
+  <!-- Lunes (1), Miércoles (3), Viernes (5) a las 2:00 AM -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Weekday</key><integer>1</integer>
+      <key>Hour</key><integer>2</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+    <dict>
+      <key>Weekday</key><integer>3</integer>
+      <key>Hour</key><integer>2</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+    <dict>
+      <key>Weekday</key><integer>5</integer>
+      <key>Hour</key><integer>2</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>/Users/macmini/LeadForge/logs/rutina_sqb.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/macmini/LeadForge/logs/rutina_sqb_error.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/macmini/LeadForge/venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <!-- No reiniciar si falla -->
+  <key>KeepAlive</key>
+  <false/>
+
+  <!-- Esperar a que haya red -->
+  <key>NetworkState</key>
+  <true/>
+
+</dict>
+</plist>

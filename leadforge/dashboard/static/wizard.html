@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeadForge — Nueva Campaña con IA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak]{display:none!important}
+    .sidebar-link{@apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-all text-sm font-medium}
+    .sidebar-link.active{@apply bg-indigo-600 text-white}
+    .step-dot{@apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all}
+    .card-category{@apply border-2 rounded-xl p-4 cursor-pointer transition-all hover:shadow-md}
+    .card-category.selected{@apply border-indigo-500 bg-indigo-50}
+    .card-category.cache{@apply border-emerald-400 bg-emerald-50}
+    .card-category.cache.selected{@apply border-emerald-600 bg-emerald-100}
+    .label-input{@apply block text-sm font-medium text-slate-700 mb-1.5}
+    .text-input{@apply w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent}
+    .textarea-input{@apply w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none}
+    @keyframes pulse-ring { 0%{transform:scale(0.8);opacity:1} 100%{transform:scale(2);opacity:0} }
+    .pulse-ring::before{content:'';position:absolute;border-radius:50%;animation:pulse-ring 1.5s ease-out infinite;border:2px solid #6366f1;inset:-6px;}
+  </style>
+</head>
+<body class="bg-slate-50 font-sans" x-data="wizard()" x-init="init()">
+
+<div class="flex h-screen overflow-hidden">
+  <!-- SIDEBAR -->
+  <aside class="w-60 bg-slate-900 flex flex-col flex-shrink-0">
+    <div class="px-5 py-5 border-b border-slate-700">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">LF</div>
+        <div><p class="text-white font-bold text-sm">LeadForge</p><p class="text-slate-400 text-xs">Sistema de Leads B2B</p></div>
+      </div>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      <a href="/" class="sidebar-link"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Dashboard</a>
+      <a href="/wizard" class="sidebar-link active"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Nueva Campaña (IA)</a>
+      <a href="/cuentas" class="sidebar-link"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Cuentas de Email</a>
+      <a href="/reportes" class="sidebar-link"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Reportes</a>
+    </nav>
+    <!-- Tip de IA -->
+    <div class="px-4 py-4 border-t border-slate-700">
+      <div class="bg-slate-800 rounded-lg p-3">
+        <p class="text-slate-300 text-xs font-medium mb-1">💡 Tip del Wizard</p>
+        <p class="text-slate-400 text-xs leading-relaxed">Claude descubrirá compradores que no imaginarías. Las "sorpresas" suelen tener 2x más conversión.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 overflow-y-auto">
+    <!-- Top bar con steps -->
+    <div class="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10">
+      <div class="flex items-center justify-between">
+        <h1 class="text-lg font-semibold text-slate-800">Nueva Campaña con IA</h1>
+        <div class="flex items-center gap-2">
+          <!-- Step indicators -->
+          <template x-for="(label, i) in ['Producto', 'Categorías IA', 'Configurar', 'Lanzar']" :key="i">
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2">
+                <div class="step-dot relative"
+                  :class="step > i+1 ? 'bg-emerald-500 border-emerald-500 text-white' : step === i+1 ? 'bg-indigo-600 border-indigo-600 text-white pulse-ring' : 'bg-white border-slate-300 text-slate-400'">
+                  <span x-show="step <= i+1" x-text="i+1"></span>
+                  <svg x-show="step > i+1" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span class="text-xs font-medium hidden sm:block"
+                  :class="step === i+1 ? 'text-indigo-600' : 'text-slate-400'"
+                  x-text="label"></span>
+              </div>
+              <div x-show="i < 3" class="w-8 h-px bg-slate-200"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6 max-w-4xl mx-auto">
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- PASO 1: Definir producto                               -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div x-show="step === 1" x-transition>
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-slate-800">¿Qué vendes?</h2>
+          <p class="text-slate-500 text-sm mt-1">Entre más detallado, mejor será el análisis de IA. Describe el producto, sus ventajas y a quién le sueles vender.</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 space-y-5">
+          <div>
+            <label class="label-input">Producto o servicio que ofreces *</label>
+            <textarea x-model="form.product" class="textarea-input h-28"
+              placeholder="Ejemplo: Pinturas en aerosol biodegradables certificadas REACH. Secado en 15 min, acabado profesional. Precio competitivo con margen del 35-45% para distribuidores. Ideales para uso interior y exterior..."></textarea>
+            <p class="text-slate-400 text-xs mt-1" x-text="form.product.length + ' caracteres (mínimo 20)'"></p>
+          </div>
+
+          <div>
+            <label class="label-input">¿A quién ya le vendes actualmente? <span class="text-slate-400 font-normal">(opcional)</span></label>
+            <textarea x-model="form.known_buyers" class="textarea-input h-20"
+              placeholder="Ejemplo: ferreterías, talleres mecánicos, empresas de pintura de autos..."></textarea>
+            <p class="text-slate-400 text-xs mt-1">Estos serán marcados como "obvios". Claude buscará las sorpresas.</p>
+          </div>
+
+          <div>
+            <label class="label-input">Ciudad principal de la campaña *</label>
+            <input x-model="form.ciudad" type="text" class="text-input" placeholder="Ejemplo: Monterrey, Nuevo León">
+            <p class="text-slate-400 text-xs mt-1">Puedes agregar más ciudades en el paso siguiente.</p>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button @click="analyzeWithAI()"
+              :disabled="form.product.length < 20 || !form.ciudad || analyzing"
+              class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg transition-colors flex items-center gap-2">
+              <template x-if="!analyzing">
+                <span class="flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  Analizar con Claude IA
+                </span>
+              </template>
+              <template x-if="analyzing">
+                <span class="flex items-center gap-2">
+                  <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                  Analizando con Claude...
+                </span>
+              </template>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- PASO 2: Selección de categorías                        -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div x-show="step === 2" x-transition x-cloak>
+        <div class="mb-6 flex items-start justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800">Selecciona las categorías</h2>
+            <p class="text-slate-500 text-sm mt-1">Claude encontró <strong x-text="categories.length"></strong> tipos de compradores potenciales.</p>
+          </div>
+          <div class="flex items-center gap-3 text-sm">
+            <span class="flex items-center gap-1.5 text-emerald-600"><span class="w-3 h-3 rounded bg-emerald-400 inline-block"></span>Ya tienes datos</span>
+            <span class="flex items-center gap-1.5 text-indigo-600"><span class="w-3 h-3 rounded bg-indigo-300 inline-block"></span>A scraper</span>
+          </div>
+        </div>
+
+        <!-- Barra de selección -->
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-3 mb-4 flex items-center justify-between">
+          <div class="flex items-center gap-4 text-sm">
+            <span><strong x-text="selectedCategories.length"></strong> categorías seleccionadas</span>
+            <span class="text-slate-400">|</span>
+            <span class="text-emerald-600"><strong x-text="selectedInCache"></strong> del caché</span>
+            <span class="text-indigo-600"><strong x-text="selectedNew"></strong> a scraper</span>
+          </div>
+          <div class="flex gap-2">
+            <button @click="selectAll()" class="text-xs text-indigo-600 hover:underline">Seleccionar todas</button>
+            <span class="text-slate-300">|</span>
+            <button @click="clearAll()" class="text-xs text-slate-400 hover:underline">Limpiar</button>
+          </div>
+        </div>
+
+        <!-- Categorías en caché primero -->
+        <div x-show="categories.filter(c=>c.ya_en_cache).length > 0">
+          <p class="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-3">🟢 Ya tienes datos — Sin costo extra</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+            <template x-for="cat in categories.filter(c=>c.ya_en_cache)" :key="cat.nombre_busqueda">
+              <div class="card-category cache" :class="isSelected(cat) ? 'selected' : ''" @click="toggleCategory(cat)">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" :checked="isSelected(cat)" class="rounded border-emerald-400 text-emerald-500 focus:ring-emerald-500" @click.stop="toggleCategory(cat)">
+                    <h3 class="font-semibold text-slate-800 text-sm capitalize" x-text="cat.nombre_busqueda"></h3>
+                  </div>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                    :class="cat.potencial === 'alto' ? 'bg-emerald-100 text-emerald-700' : cat.potencial === 'medio' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'"
+                    x-text="cat.potencial"></span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed mb-2" x-text="cat.razon"></p>
+                <div class="flex items-center gap-3 text-xs text-slate-500">
+                  <span class="text-emerald-600 font-medium" x-text="cat.leads_con_email + ' leads c/email'"></span>
+                  <span x-show="cat.cache_dias !== null" x-text="'Hace ' + cat.cache_dias + ' días'"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Nuevas a scraper -->
+        <div x-show="categories.filter(c=>!c.ya_en_cache).length > 0">
+          <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 mb-3">🔵 Nuevas — Requieren scraping</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+            <template x-for="cat in categories.filter(c=>!c.ya_en_cache)" :key="cat.nombre_busqueda">
+              <div class="card-category" :class="isSelected(cat) ? 'selected' : 'border-slate-200'" @click="toggleCategory(cat)">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" :checked="isSelected(cat)" class="rounded border-slate-300 text-indigo-500 focus:ring-indigo-500" @click.stop="toggleCategory(cat)">
+                    <h3 class="font-semibold text-slate-800 text-sm capitalize" x-text="cat.nombre_busqueda"></h3>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span x-show="cat.tipo === 'sorpresa'" class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">✨ Sorpresa</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                      :class="cat.potencial === 'alto' ? 'bg-emerald-100 text-emerald-700' : cat.potencial === 'medio' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'"
+                      x-text="cat.potencial"></span>
+                  </div>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed mb-2" x-text="cat.razon"></p>
+                <div class="text-xs text-slate-400">
+                  <span x-text="cat.sinonimos_google_maps?.length + ' variantes de búsqueda'"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Navegación -->
+        <div class="flex items-center justify-between pt-4 border-t border-slate-200">
+          <button @click="step=1" class="text-slate-500 hover:text-slate-700 flex items-center gap-2 text-sm">
+            ← Volver
+          </button>
+          <button @click="goToStep3()" :disabled="selectedCategories.length === 0"
+            class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm">
+            Continuar →
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- PASO 3: Configurar campaña                             -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div x-show="step === 3" x-transition x-cloak>
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-slate-800">Configura la campaña</h2>
+          <p class="text-slate-500 text-sm mt-1">Datos del vendedor y configuración de Instantly.ai.</p>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <!-- Datos del vendedor -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 space-y-4">
+            <h3 class="font-semibold text-slate-700">👤 Datos del vendedor</h3>
+            <div>
+              <label class="label-input">Tu nombre *</label>
+              <input x-model="config.vendedor_nombre" type="text" class="text-input" placeholder="Carlos Martínez">
+            </div>
+            <div>
+              <label class="label-input">Empresa *</label>
+              <input x-model="config.empresa" type="text" class="text-input" placeholder="EcoColor México">
+            </div>
+            <div>
+              <label class="label-input">Link de agenda *</label>
+              <input x-model="config.link_agenda" type="url" class="text-input" placeholder="https://cal.com/tu-perfil/15min">
+            </div>
+            <div>
+              <label class="label-input">Nombre de la campaña</label>
+              <input x-model="config.campaign_name" type="text" class="text-input" placeholder="Pinturas Monterrey Q1 2026">
+            </div>
+          </div>
+
+          <!-- Config de Instantly + Ciudades -->
+          <div class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 space-y-4">
+              <h3 class="font-semibold text-slate-700">📧 Instantly.ai</h3>
+              <div>
+                <label class="label-input">Emails por día (límite total)</label>
+                <input x-model.number="config.daily_limit" type="number" min="10" max="500" class="text-input" placeholder="100">
+              </div>
+              <div>
+                <label class="label-input">Buffer de días en campaña</label>
+                <input x-model.number="config.buffer_days" type="number" min="1" max="7" class="text-input" placeholder="3">
+                <p class="text-slate-400 text-xs mt-1">Mantener <span x-text="config.daily_limit * config.buffer_days"></span> leads activos en Instantly</p>
+              </div>
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium text-slate-700">Activar WhatsApp (DB2)</label>
+                <button @click="config.activar_whatsapp = !config.activar_whatsapp"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                  :class="config.activar_whatsapp ? 'bg-indigo-600' : 'bg-slate-200'">
+                  <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    :class="config.activar_whatsapp ? 'translate-x-6' : 'translate-x-1'"></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Ciudades adicionales -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+              <h3 class="font-semibold text-slate-700 mb-3">🌆 Ciudades</h3>
+              <div class="space-y-2">
+                <template x-for="(ciudad, i) in config.ciudades" :key="i">
+                  <div class="flex items-center gap-2">
+                    <input type="text" class="text-input flex-1" :value="ciudad"
+                      @change="config.ciudades[i] = $event.target.value">
+                    <button @click="config.ciudades.splice(i,1)" x-show="config.ciudades.length > 1"
+                      class="text-red-400 hover:text-red-600 flex-shrink-0">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                </template>
+                <button @click="config.ciudades.push('')"
+                  class="text-indigo-600 text-xs hover:underline flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Agregar ciudad
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estimación de costo -->
+        <div class="mt-4 bg-slate-800 text-white rounded-xl p-5">
+          <h3 class="font-semibold mb-3">💰 Estimación de costo</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            <div><p class="text-slate-400 text-xs">Apify</p><p class="text-xl font-bold" x-text="'$' + (costEstimate.apify_creditos || 0).toFixed(2)"></p></div>
+            <div><p class="text-slate-400 text-xs">Anymail Finder</p><p class="text-xl font-bold" x-text="'$' + (costEstimate.anymail_usd || 0).toFixed(2)"></p></div>
+            <div><p class="text-slate-400 text-xs">Total estimado</p><p class="text-xl font-bold text-indigo-300" x-text="'$' + (costEstimate.total_usd || 0).toFixed(2)"></p></div>
+            <div><p class="text-slate-400 text-xs">Leads estimados</p><p class="text-xl font-bold text-emerald-400" x-text="costEstimate.leads_estimados || '—'"></p></div>
+          </div>
+          <p class="text-slate-400 text-xs text-center mt-3">Costo por lead: ~$<span x-text="(costEstimate.costo_por_lead || 0).toFixed(4)"></span> USD</p>
+        </div>
+
+        <div class="flex items-center justify-between pt-5 border-t border-slate-200 mt-5">
+          <button @click="step=2" class="text-slate-500 hover:text-slate-700 flex items-center gap-2 text-sm">← Volver</button>
+          <button @click="step=4"
+            :disabled="!config.vendedor_nombre || !config.empresa || !config.link_agenda"
+            class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm">
+            Revisar y Lanzar →
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- PASO 4: Confirmación y lanzamiento                     -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div x-show="step === 4" x-transition x-cloak>
+        <!-- Pre-lanzamiento -->
+        <div x-show="!launching && !taskId" x-transition>
+          <div class="mb-6">
+            <h2 class="text-xl font-bold text-slate-800">Confirmar y Lanzar 🚀</h2>
+            <p class="text-slate-500 text-sm mt-1">Revisa el resumen antes de iniciar la campaña.</p>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
+            <div class="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
+              <h3 class="font-semibold text-slate-700 mb-3 text-sm">📋 Categorías seleccionadas</h3>
+              <div class="space-y-2">
+                <template x-for="cat in selectedCategories" :key="cat.nombre_busqueda">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-slate-700 capitalize" x-text="cat.nombre_busqueda"></span>
+                    <span class="text-xs" :class="cat.ya_en_cache ? 'text-emerald-600' : 'text-indigo-600'"
+                      x-text="cat.ya_en_cache ? '🟢 Caché' : '🔵 Nuevo'"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-100 p-5 shadow-sm space-y-3">
+              <h3 class="font-semibold text-slate-700 mb-3 text-sm">⚙️ Configuración</h3>
+              <div class="text-sm space-y-2">
+                <div class="flex justify-between"><span class="text-slate-500">Vendedor</span><span class="font-medium" x-text="config.vendedor_nombre"></span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Empresa</span><span class="font-medium" x-text="config.empresa"></span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Emails/día</span><span class="font-medium" x-text="config.daily_limit"></span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Ciudades</span><span class="font-medium" x-text="config.ciudades.filter(c=>c).length"></span></div>
+                <div class="flex justify-between"><span class="text-slate-500">WhatsApp</span><span class="font-medium" x-text="config.activar_whatsapp ? '✅ Activo' : '⏭ Inactivo'"></span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Costo estimado</span><span class="font-bold text-indigo-600" x-text="'~$' + (costEstimate.total_usd || 0).toFixed(2) + ' USD'"></span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <button @click="step=3" class="text-slate-500 hover:text-slate-700 text-sm">← Volver</button>
+            <button @click="launchCampaign()"
+              class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl transition-colors flex items-center gap-2 text-base shadow-lg shadow-emerald-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              🚀 LANZAR CAMPAÑA
+            </button>
+          </div>
+        </div>
+
+        <!-- En ejecución — progreso en tiempo real -->
+        <div x-show="taskId" x-transition>
+          <div class="mb-6">
+            <h2 class="text-xl font-bold text-slate-800">Campaña en progreso...</h2>
+            <p class="text-slate-500 text-sm mt-1">El pipeline está corriendo. Puedes cerrar esta ventana; recibirás notificación en Telegram cuando termine.</p>
+          </div>
+
+          <!-- Barra de progreso -->
+          <div class="bg-white rounded-xl border border-slate-100 p-5 shadow-sm mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-slate-700 capitalize" x-text="taskStatus"></span>
+              <span class="text-sm font-bold text-indigo-600" x-text="taskProgress + '%'"></span>
+            </div>
+            <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                :style="'width:' + taskProgress + '%'"></div>
+            </div>
+          </div>
+
+          <!-- Log en tiempo real -->
+          <div class="bg-slate-900 rounded-xl p-4 font-mono text-xs text-emerald-400 h-64 overflow-y-auto" id="logBox">
+            <template x-for="(log, i) in taskLogs" :key="i">
+              <p class="mb-0.5" x-text="log"></p>
+            </template>
+            <p x-show="taskLogs.length === 0" class="text-slate-500">Iniciando...</p>
+          </div>
+
+          <!-- Resultado final -->
+          <div x-show="taskDone" x-transition class="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+            <h3 class="font-bold text-emerald-800 mb-2">✅ Campaña completada</h3>
+            <div class="grid grid-cols-3 gap-4 text-center">
+              <div><p class="text-emerald-600 text-xs">DB1 Email</p><p class="text-xl font-bold text-emerald-800" x-text="taskResult?.leads_db1 || 0"></p></div>
+              <div><p class="text-emerald-600 text-xs">DB2 WhatsApp</p><p class="text-xl font-bold text-emerald-800" x-text="taskResult?.leads_db2 || 0"></p></div>
+              <div><p class="text-emerald-600 text-xs">Costo real</p><p class="text-xl font-bold text-emerald-800" x-text="'$' + (taskResult?.costo_usd || 0).toFixed(2)"></p></div>
+            </div>
+            <div class="mt-4 flex gap-3">
+              <a href="/" class="bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700">Ver dashboard</a>
+              <button @click="resetWizard()" class="text-slate-500 text-sm hover:underline">Nueva campaña</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+function wizard() {
+  return {
+    step: 1,
+    analyzing: false,
+    launching: false,
+    form: { product: '', known_buyers: '', ciudad: '' },
+    categories: [],
+    selectedCategories: [],
+    config: {
+      vendedor_nombre: '', empresa: '', link_agenda: '',
+      campaign_name: '', daily_limit: 100, buffer_days: 3,
+      activar_whatsapp: true, ciudades: [''],
+    },
+    costEstimate: {},
+    taskId: null, taskStatus: '', taskProgress: 0, taskLogs: [], taskDone: false, taskResult: null,
+
+    get selectedInCache() { return this.selectedCategories.filter(c=>c.ya_en_cache).length },
+    get selectedNew() { return this.selectedCategories.filter(c=>!c.ya_en_cache).length },
+
+    init() { /* nada */ },
+
+    async analyzeWithAI() {
+      this.analyzing = true;
+      try {
+        const res = await fetch('/api/wizard/analyze', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ product: this.form.product, known_buyers: this.form.known_buyers, ciudad: this.form.ciudad }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Error en análisis');
+        this.categories = data.categorias || [];
+        this.config.ciudades = [this.form.ciudad];
+        this.step = 2;
+      } catch(e) {
+        alert('Error: ' + e.message);
+      }
+      this.analyzing = false;
+    },
+
+    isSelected(cat) { return this.selectedCategories.some(c=>c.nombre_busqueda === cat.nombre_busqueda) },
+    toggleCategory(cat) {
+      const idx = this.selectedCategories.findIndex(c=>c.nombre_busqueda === cat.nombre_busqueda);
+      if (idx >= 0) this.selectedCategories.splice(idx, 1);
+      else this.selectedCategories.push(cat);
+    },
+    selectAll() { this.selectedCategories = [...this.categories] },
+    clearAll() { this.selectedCategories = [] },
+
+    async goToStep3() {
+      this.step = 3;
+      // Estimar costo
+      const res = await fetch('/api/wizard/estimate-cost', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ categorias: this.selectedCategories, ciudades: this.config.ciudades.filter(c=>c) }),
+      });
+      this.costEstimate = await res.json();
+    },
+
+    async launchCampaign() {
+      this.launching = true;
+      const payload = {
+        product: this.form.product,
+        known_buyers: this.form.known_buyers,
+        ciudades: this.config.ciudades.filter(c=>c),
+        categorias_seleccionadas: this.selectedCategories,
+        vendedor_nombre: this.config.vendedor_nombre,
+        empresa: this.config.empresa,
+        link_agenda: this.config.link_agenda,
+        campaign_name: this.config.campaign_name || `Campaña ${new Date().toLocaleDateString('es-MX')}`,
+        daily_limit: this.config.daily_limit,
+        buffer_days: this.config.buffer_days,
+        activar_whatsapp: this.config.activar_whatsapp,
+      };
+      const res = await fetch('/api/campaign/launch', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      this.taskId = data.task_id;
+      this.listenToProgress();
+    },
+
+    listenToProgress() {
+      const evtSource = new EventSource(`/api/campaign/${this.taskId}/stream`);
+      evtSource.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.log) {
+          this.taskLogs.push(data.log);
+          this.taskStatus = data.status;
+          this.taskProgress = data.progress;
+          // Auto-scroll log
+          this.$nextTick(() => {
+            const box = document.getElementById('logBox');
+            if (box) box.scrollTop = box.scrollHeight;
+          });
+        }
+        if (data.done) {
+          this.taskDone = true;
+          this.taskResult = data.result;
+          evtSource.close();
+        }
+      };
+      evtSource.onerror = () => evtSource.close();
+    },
+
+    resetWizard() {
+      this.step = 1; this.form = {product:'',known_buyers:'',ciudad:''};
+      this.categories = []; this.selectedCategories = [];
+      this.config = {vendedor_nombre:'',empresa:'',link_agenda:'',campaign_name:'',daily_limit:100,buffer_days:3,activar_whatsapp:true,ciudades:['']};
+      this.taskId = null; this.taskLogs = []; this.taskDone = false; this.taskResult = null;
+    }
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeadForge — Cuentas de Email</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>[x-cloak]{display:none!important}.sidebar-link{@apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-all text-sm font-medium}.sidebar-link.active{@apply bg-indigo-600 text-white}</style>
+</head>
+<body class="bg-slate-50 font-sans" x-data="accounts()" x-init="init()">
+<div class="flex h-screen overflow-hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="w-60 bg-slate-900 flex flex-col flex-shrink-0">
+    <div class="px-5 py-5 border-b border-slate-700"><div class="flex items-center gap-2.5"><div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">LF</div><div><p class="text-white font-bold text-sm">LeadForge</p><p class="text-slate-400 text-xs">Sistema de Leads B2B</p></div></div></div>
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      <a href="/" class="sidebar-link"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Dashboard</a>
+      <a href="/wizard" class="sidebar-link"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Nueva Campaña (IA)</a>
+      <a href="/cuentas" class="sidebar-link active"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Cuentas de Email</a>
+      <a href="/reportes" class="sidebar-link"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Reportes</a>
+    </nav>
+    <div class="px-4 py-4 border-t border-slate-700">
+      <div class="bg-slate-800 rounded-lg p-3">
+        <p class="text-slate-300 text-xs font-medium mb-1">🛡️ Protección de dominios</p>
+        <p class="text-slate-400 text-xs leading-relaxed">Bounce &gt; 3% o Spam &gt; 0.1% pausa la cuenta automáticamente.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 overflow-y-auto">
+    <div class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div>
+        <h1 class="text-lg font-semibold text-slate-800">Cuentas de Email — Instantly.ai</h1>
+        <p class="text-slate-400 text-sm">Los dominios calentados son tu activo más valioso. Se protegen automáticamente.</p>
+      </div>
+      <button @click="syncFromInstantly()" :disabled="syncing"
+        class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+        <svg class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <span x-text="syncing ? 'Sincronizando...' : 'Sincronizar con Instantly'"></span>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-5">
+
+      <!-- Summary cards -->
+      <div class="grid grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm text-center">
+          <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Total cuentas</p>
+          <p class="text-2xl font-bold text-slate-800" x-text="accounts.length"></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm text-center">
+          <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Activas hoy</p>
+          <p class="text-2xl font-bold text-emerald-600" x-text="summary.active_count || 0"></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm text-center">
+          <p class="text-slate-500 text-xs uppercase tracking-wider mb-1">Enviados hoy</p>
+          <p class="text-2xl font-bold text-slate-800" x-text="summary.total_sent_today || 0"></p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-emerald-200 shadow-sm text-center bg-emerald-50">
+          <p class="text-emerald-600 text-xs uppercase tracking-wider mb-1">Disponibles hoy</p>
+          <p class="text-2xl font-bold text-emerald-700" x-text="summary.total_remaining || 0"></p>
+        </div>
+      </div>
+
+      <!-- Tabla de cuentas -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100">
+          <h2 class="font-semibold text-slate-700 text-sm">📧 Estado de Cuentas</h2>
+        </div>
+
+        <div x-show="accounts.length === 0" class="px-5 py-10 text-center text-slate-400">
+          <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <p class="font-medium">No hay cuentas configuradas</p>
+          <p class="text-sm mt-1">Configura INSTANTLY_API_KEY en el .env y sincroniza.</p>
+        </div>
+
+        <table class="w-full text-sm" x-show="accounts.length > 0">
+          <thead>
+            <tr class="bg-slate-50">
+              <th class="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">Cuenta</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Enviados</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase w-40">Uso hoy</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Disponibles</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Bounce</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Spam</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Estado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            <template x-for="acc in accounts" :key="acc.email">
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-5 py-4">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg" x-text="acc.health_emoji"></span>
+                    <span class="font-medium text-slate-700" x-text="acc.email"></span>
+                  </div>
+                </td>
+                <td class="px-4 py-4 text-center">
+                  <span class="font-semibold text-slate-800" x-text="acc.sent_today"></span>
+                  <span class="text-slate-400">/</span>
+                  <span class="text-slate-500" x-text="acc.daily_limit"></span>
+                </td>
+                <td class="px-4 py-4">
+                  <div class="h-2 bg-slate-100 rounded-full overflow-hidden w-36">
+                    <div class="h-full rounded-full transition-all"
+                      :class="acc.usage_percent >= 80 ? 'bg-amber-400' : acc.usage_percent >= 50 ? 'bg-indigo-400' : 'bg-emerald-400'"
+                      :style="'width:' + Math.min(acc.usage_percent, 100) + '%'"></div>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-0.5" x-text="acc.usage_percent + '%'"></p>
+                </td>
+                <td class="px-4 py-4 text-center font-semibold"
+                  :class="acc.remaining_today > 0 ? 'text-emerald-600' : 'text-red-400'"
+                  x-text="acc.remaining_today">
+                </td>
+                <td class="px-4 py-4 text-center">
+                  <span class="text-xs font-medium rounded-full px-2 py-0.5"
+                    :class="acc.bounce_rate > 3 ? 'bg-red-100 text-red-700' : acc.bounce_rate > 1 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'"
+                    x-text="acc.bounce_rate.toFixed(1) + '%'"></span>
+                </td>
+                <td class="px-4 py-4 text-center">
+                  <span class="text-xs font-medium rounded-full px-2 py-0.5"
+                    :class="acc.spam_rate > 0.1 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'"
+                    x-text="acc.spam_rate.toFixed(3) + '%'"></span>
+                </td>
+                <td class="px-4 py-4 text-center">
+                  <span class="text-xs font-medium rounded-full px-2.5 py-1"
+                    :class="acc.status === 'active' ? 'bg-emerald-100 text-emerald-700' : acc.status === 'paused' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'"
+                    x-text="acc.status"></span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <!-- Totales -->
+        <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-sm" x-show="accounts.length > 0">
+          <span class="text-slate-500">Total del día</span>
+          <span class="font-semibold text-slate-700">
+            <span x-text="summary.total_sent_today || 0"></span> enviados de
+            <span x-text="summary.total_limit_today || 0"></span> disponibles
+          </span>
+        </div>
+      </div>
+
+      <!-- Alertas de dominio -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+        <h2 class="font-semibold text-slate-700 text-sm mb-4">🛡️ Reglas de Protección de Dominios</h2>
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <div class="text-center p-3 bg-slate-50 rounded-lg">
+            <p class="text-2xl font-bold text-slate-800">50</p>
+            <p class="text-slate-500 text-xs mt-1">Max emails/día por cuenta</p>
+          </div>
+          <div class="text-center p-3 bg-amber-50 rounded-lg">
+            <p class="text-2xl font-bold text-amber-600">80%</p>
+            <p class="text-slate-500 text-xs mt-1">Alerta uso diario</p>
+          </div>
+          <div class="text-center p-3 bg-red-50 rounded-lg">
+            <p class="text-2xl font-bold text-red-600">3%</p>
+            <p class="text-slate-500 text-xs mt-1">Bounce max → pausa auto</p>
+          </div>
+          <div class="text-center p-3 bg-red-50 rounded-lg">
+            <p class="text-2xl font-bold text-red-600">0.1%</p>
+            <p class="text-slate-500 text-xs mt-1">Spam max → pausa auto</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+function accounts() {
+  return {
+    accounts: [], summary: {}, syncing: false,
+
+    async init() {
+      await this.loadAccounts();
+    },
+
+    async loadAccounts() {
+      const res = await fetch('/api/accounts');
+      const data = await res.json();
+      this.accounts = data.accounts || [];
+      this.summary = data;
+    },
+
+    async syncFromInstantly() {
+      this.syncing = true;
+      const res = await fetch('/api/accounts?sync=true');
+      const data = await res.json();
+      this.accounts = data.accounts || [];
+      this.summary = data;
+      this.syncing = false;
+    }
+  }
+}
+</script>
+</body>
+</html>

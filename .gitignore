@@ -1,0 +1,100 @@
+# ============================================================
+# LeadForge — .gitignore
+# ============================================================
+
+# --- CREDENCIALES Y SECRETS (NUNCA subir) ---
+.env
+.env.local
+.env.production
+.env.*.local
+*.key
+*.pem
+*.p12
+*.pfx
+*secret*
+*credentials*
+*password*
+ionos_accounts.csv
+ionos_resumen.js
+claude_desktop_mcp_config.json
+
+# --- PYTHON ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+MANIFEST
+
+# --- ENTORNOS VIRTUALES ---
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.virtualenv/
+
+# --- LOGS ---
+*.log
+logs/
+*.log.*
+
+# --- DATOS PROCESADOS (pueden contener info de clientes) ---
+data/
+temp_*.json
+temp_*.csv
+nul
+
+# --- ARCHIVOS TEMPORALES ---
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# --- SISTEMA OPERATIVO ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# --- NODE ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- IDE / EDITORES ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# --- CLAUDE CODE (configuración local) ---
+.claude/
+
+# --- DOCKER ---
+# docker-compose.override.yml  (el principal sí se sube)
+
+# --- ARCHIVOS DE SESIÓN Y CONTEXTO LOCAL ---
+SESION_CONTEXTO_*.md
+IONOS_Resumen_Contratos.docx
+logsleadforge_system.log

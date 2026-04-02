@@ -1,0 +1,51 @@
+# LeadForge — Dependencias Python
+# Instalar con: pip install -r requirements.txt
+
+# HTTP cliente asíncrono
+httpx>=0.27.0
+
+# Web enricher — scraping y parsing HTML
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# Supabase client (versión fija para evitar pyiceberg/pyroaring que requieren compilador C)
+supabase>=2.4.0,<2.10.0
+
+# Anthropic (Claude API)
+anthropic>=0.34.0
+
+# Variables de entorno
+python-dotenv>=1.0.0
+
+# DNS lookup para MX record check
+dnspython>=2.6.0
+
+# Encriptación de datos sensibles
+cryptography>=42.0.0
+
+# Para hash de contraseñas (API keys)
+bcrypt>=4.1.0
+
+# Utilidades
+asyncio-throttle>=1.0.2
+
+# ── Fase 3: Campaign Builder ───────────────────────────────────
+# Parseo de archivos YAML de configuración de campañas
+PyYAML>=6.0.1
+
+# ── Fase 2: Monitor + Telegram + Webhook ──────────────────────
+# Bot de Telegram (comandos + notificaciones)
+python-telegram-bot>=21.0
+
+# Scheduler para el health daemon
+APScheduler>=3.10.0
+
+# Web server para webhook de Instantly.ai
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# ── Fase 4: Dashboard Web ──────────────────────────────────────
+# Templates HTML para el servidor FastAPI
+jinja2>=3.1.4
+# Soporte para formularios en FastAPI (uploads, form data)
+python-multipart>=0.0.9
