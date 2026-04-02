@@ -17,6 +17,7 @@
 ionos_accounts.csv
 ionos_resumen.js
 claude_desktop_mcp_config.json
+temp_check_baserow.py
 
 # --- PYTHON ---
 __pycache__/
