@@ -1,0 +1,237 @@
+# =============================================================================
+# LeadForge — Configuración de Campaña
+# =============================================================================
+# Copia este archivo y renómbralo: [nombre_cliente]_[producto].yaml
+# Ejemplo: pinturas_monterrey.yaml | desengrasante_cdmx.yaml
+#
+# Uso:
+#   python start_campaign.py --config campaign_configs/mi_campana.yaml
+#   python start_campaign.py --config campaign_configs/mi_campana.yaml --dry-run
+# =============================================================================
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IDENTIFICACIÓN
+# ─────────────────────────────────────────────────────────────────────────────
+campana:
+  nombre: "Pinturas Biodegradables — Monterrey Q1 2026"
+  cliente_id: ""              # Dejar vacío para usar el CLIENTE_ID del .env
+  descripcion: >
+    Campaña de cold email para vender pinturas en aerosol biodegradables a
+    negocios industriales y comercios en Monterrey y área metropolitana.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRODUCTO / OFERTA
+# ─────────────────────────────────────────────────────────────────────────────
+producto:
+  nombre_corto: "pinturas en aerosol biodegradables"
+  descripcion_completa: >
+    Pinturas en aerosol 94% biodegradables, aptas para uso en interiores y
+    exteriores. Acabados mate, satinado y brillante. Secado en 15 minutos.
+    Certificación REACH europea. Precio competitivo con margen del 35-45%
+    para distribuidores.
+
+  beneficio_principal: >
+    Diferénciense de la competencia ofreciendo la única pintura en aerosol
+    biodegradable del mercado local.
+
+  beneficio_secundario: >
+    Los compradores conscientes del medio ambiente buscan opciones eco-friendly
+    y pagan un 20% más por ellas.
+
+  oferta_especial: "Muestra gratuita para primeros pedidos de más de 50 unidades"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VENDEDOR / REMITENTE
+# ─────────────────────────────────────────────────────────────────────────────
+vendedor:
+  nombre: "Carlos Martínez"
+  cargo: "Director Comercial"
+  empresa: "EcoColor México"
+  email_firma: "carlos@ecocolor.mx"    # Solo para la firma, no para el envío
+  telefono: "+52 81 1234 5678"
+  link_agenda: "https://cal.com/carlos-ecocolor/15min"
+  sitio_web: "https://ecocolor.mx"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TARGETING — Qué buscar y dónde
+# ─────────────────────────────────────────────────────────────────────────────
+targeting:
+  ciudades:
+    - "Monterrey, Nuevo León"
+    - "San Pedro Garza García, Nuevo León"
+    - "Guadalupe, Nuevo León"
+    - "Santa Catarina, Nuevo León"
+
+  categorias:
+    # Cada categoría define sus parámetros de búsqueda
+    - nombre: "ferretería"
+      sinonimos:
+        - "ferretería"
+        - "distribuidora de materiales"
+        - "tienda de materiales de construcción"
+        - "pinturas y ferretería"
+      perfil_apify: "alta_densidad"   # alta | media | baja
+      prioridad: 1                     # 1 = más urgente
+
+    - nombre: "taller mecánico"
+      sinonimos:
+        - "taller mecánico"
+        - "taller automotriz"
+        - "servicio mecánico"
+        - "reparación de autos"
+        - "diagnóstico automotriz"
+      perfil_apify: "alta_densidad"
+      prioridad: 2
+
+    - nombre: "empresa de alimentos"
+      sinonimos:
+        - "empresa de alimentos"
+        - "planta de alimentos"
+        - "procesadora de alimentos"
+        - "catering industrial"
+        - "cocina industrial"
+      perfil_apify: "media_densidad"
+      prioridad: 3
+
+    - nombre: "taller CNC"
+      sinonimos:
+        - "taller CNC"
+        - "maquinado industrial"
+        - "mecanizado de precisión"
+        - "taller de maquinaria"
+      perfil_apify: "baja_densidad"
+      prioridad: 4
+
+    - nombre: "contratista"
+      sinonimos:
+        - "contratista de construcción"
+        - "empresa constructora"
+        - "contratista industrial"
+      perfil_apify: "baja_densidad"
+      prioridad: 5
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INSTANTLY.AI — Configuración de campaña
+# ─────────────────────────────────────────────────────────────────────────────
+instantly:
+  campaign_id: ""               # Dejar vacío para crear campaña nueva
+  campaign_name: "LeadForge — EcoColor Monterrey 2026"
+
+  # Límite diario de emails de ESTA campaña (no confundir con límite por cuenta)
+  # El sistema lo distribuye automáticamente entre tus cuentas activas
+  daily_limit: 100
+
+  # Cuántos días de buffer mantener en Instantly
+  # buffer_days=3 → siempre tener 300 leads en campaña si daily_limit=100
+  buffer_days: 3
+
+  # Si True: el sistema verifica la campaña y agrega leads automáticamente
+  # si el buffer está por debajo de buffer_days × daily_limit
+  auto_inject: true
+
+  # Mínimo de leads válidos en DB antes de activar la campaña
+  min_leads_to_activate: 50
+
+  # Secuencia de emails (se configura manualmente en Instantly.ai también)
+  secuencia:
+    email_1:
+      dia: 1
+      asunto_ab_testing: true     # Claude genera 2 variantes de asunto
+    email_2:
+      dia: 3
+      asunto: ""                  # Vacío = continúa el mismo hilo
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WHATSAPP (yCloud) — Solo para DB2 (leads sin email válido)
+# ─────────────────────────────────────────────────────────────────────────────
+whatsapp:
+  activo: true
+  dias_espera_email: 3      # Esperar 3 días sin respuesta de email antes de WA
+  max_mensajes_por_dia: 50
+  delay_entre_mensajes: 30  # Segundos entre mensajes (anti-spam de yCloud)
+  horario:
+    inicio: 9               # 9am
+    fin: 19                 # 7pm
+
+  # Solo contactar por WA si el score del lead es suficientemente alto
+  score_minimo: 40
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FILTROS DE CALIDAD
+# ─────────────────────────────────────────────────────────────────────────────
+filtros:
+  # Solo leads con estos estados de email de Anymail Finder
+  email_status_permitidos:
+    - "valid"
+    # NO incluir: "likely_valid", "unknown", "invalid", "catch_all"
+
+  # Score mínimo para incluir un lead en la campaña de email
+  lead_score_minimo: 25
+
+  # Score mínimo para incluir en WhatsApp (puede ser menor que email)
+  lead_score_minimo_wa: 30
+
+  # Máximo de leads por dominio (evita spammear al mismo dominio)
+  max_leads_por_dominio: 2
+
+  # Excluir leads de las siguientes categorías aunque las hayas puesto arriba
+  excluir_categorias: []
+  # Ejemplo: ["restaurante", "peluquería"]
+
+  # Si True: excluir leads que ya estén en alguna campaña activa
+  excluir_en_otras_campanias: true
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PIPELINE DE DATOS — Cómo obtener los leads
+# ─────────────────────────────────────────────────────────────────────────────
+pipeline:
+  # Si True: usa leads de caché de Supabase (no re-scraper si ya existen)
+  usar_cache: true
+
+  # Días de antigüedad máxima para considerar el caché válido
+  cache_max_dias: 45
+
+  # Si True: fuerza re-scraping aunque haya caché (útil para actualizar datos)
+  forzar_rescraping: false
+
+  # Número máximo de leads a procesar en esta ejecución
+  # (útil para pruebas — usa 10 para dry-run)
+  max_leads: 500
+
+  # Paralelismo en las llamadas a Anymail Finder
+  anymail_concurrent: 3
+
+  # Delay entre categorías en segundos (respeta rate limits de Apify)
+  delay_entre_categorias: 5
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTIFICACIONES
+# ─────────────────────────────────────────────────────────────────────────────
+notificaciones:
+  # Enviar reporte de resultados a Telegram al finalizar el pipeline
+  reporte_telegram: true
+
+  # Alertar si el costo estimado supera este valor (USD)
+  alerta_costo_maximo: 50.0
+
+  # Alertar si se encontraron menos leads que este mínimo
+  alerta_leads_minimos: 30
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# METADATA (no modificar manualmente)
+# ─────────────────────────────────────────────────────────────────────────────
+_meta:
+  version: "1.0"
+  creado: "2026-03-07"
+  ultima_ejecucion: null
+  total_ejecuciones: 0

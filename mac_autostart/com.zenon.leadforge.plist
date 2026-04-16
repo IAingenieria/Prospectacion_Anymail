@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent para Mac Mini — LeadForge Bot 24/7
+  ================================================
+  Instalar:
+    mkdir -p ~/Library/LaunchAgents
+    cp ~/LeadForge/mac_autostart/com.zenon.leadforge.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.zenon.leadforge.plist
+
+  Ver logs:
+    tail -f ~/LeadForge/logs/launchd.log
+
+  Detener:
+    launchctl unload ~/Library/LaunchAgents/com.zenon.leadforge.plist
+
+  Reiniciar:
+    launchctl unload ~/Library/LaunchAgents/com.zenon.leadforge.plist
+    launchctl load   ~/Library/LaunchAgents/com.zenon.leadforge.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.zenon.leadforge</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/AQUI_VA_TU_USUARIO/LeadForge/venv/bin/python</string>
+        <string>/Users/AQUI_VA_TU_USUARIO/LeadForge/start_monitor.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/AQUI_VA_TU_USUARIO/LeadForge</string>
+
+    <!-- Reiniciar si falla -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Arrancar al login -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Logs -->
+    <key>StandardOutPath</key>
+    <string>/Users/AQUI_VA_TU_USUARIO/LeadForge/logs/launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/AQUI_VA_TU_USUARIO/LeadForge/logs/launchd_err.log</string>
+
+    <!-- Esperar 10s antes de reintentar si crashea -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <!-- Variables de entorno -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/AQUI_VA_TU_USUARIO/LeadForge/venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>

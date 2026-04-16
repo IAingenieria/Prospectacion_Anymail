@@ -1,0 +1,39 @@
+# Credenciales — NUNCA subir
+.env
+.env.*
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Logs
+logs/
+*.log
+
+# Datos temporales
+*.csv
+*.xlsx
+*.xls
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Archivos de tarea temporal
+tasks/
