@@ -60,12 +60,30 @@ Gran total acumulado: ~1,245 leads de manufactura de alimentos en 3 estados.
 - El pipeline instancia un nuevo `GooglePlacesScraper()` por cada ciudad, lo que resetea el KeyRotator en cada iteración (las keys 403 se re-intentan y se marcan agotadas en cada run, sin impacto funcional)
 - DENUE falla en términos multi-palabra con "de" o "y" por problemas de URL encoding — solo los términos simples como "distribuidora de alimentos" o "procesadora de alimentos" funcionan
 
+### ✅ ANYMAIL BATCH — Nuevas ciudades (285 leads con sitio_web)
+
+| Etapa | Resultado |
+|-------|----------|
+| Leads con sitio web | 285 |
+| Emails encontrados (`find_by_company`) | 89 |
+| Verificados como `valid` (`verify-email`) | **72** |
+| Inválidos | 2 |
+| Unknown (no confirmados) | 15 |
+| Créditos usados total | ~99 |
+
+Emails válidos destacados del sector alimentos:
+- `ventas@tortilleriadelconsuelo.com`, `informacion@tortilleriarubi.com`
+- `lazaro@alimentosaltamira.com`, `privera@qualtia.com` (Qualtia Alimentos)
+- `afonseca@bydsa.com` (Botanas y Derivados), `administracion@empacadoralahuerta.com`
+- `anhuerta@sigma-alimentos.com` (Sigma Alimentos)
+
 ### 🔜 PENDIENTE
-- Correr Anymail batch enrichment sobre los ~1,155 nuevos leads (Tamaulipas + Coahuila + NL extendido)
+- Crear campaña Instantly.ai con los 72+ emails válidos de manufactura de alimentos
 - Integrar Brevo API para emails personales verificados
 - Activar billing en Google Cloud para GOOGLE_KEY_1 y GOOGLE_KEY_4
 - Crear campañas Instantly.ai para clientes (Pinturas LePront, Goodman Tech, Focus Coach)
 - WhatsApp sender usando Meta Cloud API ($0.0305/msg) — pendiente número registrado
+- Push a GitHub (credenciales PAT pendientes)
 
 ---
 
