@@ -2,12 +2,45 @@
 
 ---
 
-## 📅 2026-04-16 — Sesión: Expansión regional fabricantes de alimentos (Tamaulipas + Coahuila + NL extendido)
+## 📅 2026-04-16 — Sesión: Reemplazo Apify → Google Places API + Expansión regional
 
 ### CONTEXTO DE LA SESIÓN
-Continuación de la sesión anterior. Se ejecutaron dos búsquedas masivas de fabricantes/distribuidoras
-de alimentos en 18 ciudades adicionales (Tamaulipas, Coahuila y Nuevo León fuera del área metropolitana).
-Gran total acumulado: ~1,245 leads de manufactura de alimentos en 3 estados.
+Migración definitiva de Apify a Google Places API con 4 keys propias y rotación automática.
+Primera noche en producción: 1,267 leads en 19 ciudades a costo $0.
+Creación de social_enricher.py para enriquecer leads con redes sociales.
+Expansión regional de fabricantes de alimentos: Tamaulipas + Coahuila + NL extendido.
+
+### ✅ Google Places API — 4 cuentas configuradas
+
+| Key | Cuenta | Estado |
+|-----|--------|--------|
+| GOOGLE_KEY_1 | goodmantech.com.mx | ⚠️ 403 (billing no activo) |
+| GOOGLE_KEY_2 | ia-ingenieria.com | ✅ Activa |
+| GOOGLE_KEY_3 | quimicainteligente.mx | ✅ Activa |
+| GOOGLE_KEY_4 | esgconsultores.com.mx | ⚠️ 403 (billing no activo) |
+
+### ✅ google_places_scraper.py — creado y en producción
+
+- Reemplaza `apify_scraper.py` completamente (alias `ApifyScraper = GooglePlacesScraper`)
+- Rotación automática de 4 keys — fallback en 403/429
+- Mismo output `NegocioRaw[]` que espera el pipeline
+- `NegocioRaw` extendido: `reviews_text`, `raw_data`, `tiene_email`, `tiene_telefono`
+- `check_credits()` para compatibilidad con pipeline.py
+- `scrape_multi_term` acepta tanto `location`/`max_places` (pipeline) como `ciudad`/`estado`/`max_per_term`
+
+### ✅ Primera noche en producción con Google Places
+
+- **19 ciudades scrapeadas** — NL metro + Tamaulipas + Coahuila + NL extendido
+- **1,267 leads generados** en una sola sesión
+- Tiempo promedio: 12-35 segundos por ciudad
+- **Costo: $0.00** (vs ~$5+ con Apify)
+
+### ✅ social_enricher.py — creado
+
+- Visita el sitio web de cada negocio y extrae redes sociales
+- Detecta: Facebook, Instagram, TikTok, WhatsApp, LinkedIn
+- Actualiza campos `facebook_url`, `instagram_url` en `leads_master`
+- Estado: creado, pendiente de correr en producción
 
 ### ✅ BÚSQUEDA 1 — Tamaulipas + Coahuila (8 ciudades)
 
@@ -53,7 +86,7 @@ Gran total acumulado: ~1,245 leads de manufactura de alimentos en 3 estados.
 | Monterrey metro (2026-04-15) | ~89 |
 | Tamaulipas + Coahuila (2026-04-16) | 542 |
 | NL extendido (2026-04-16) | 614 |
-| **GRAN TOTAL** | **~1,245** |
+| **GRAN TOTAL** | **~1,267** |
 
 ### ⚠️ Notas técnicas
 - Keys GOOGLE_KEY_1 y GOOGLE_KEY_4 siguen dando 403 (billing no activo) — el pipeline usa solo KEY_2 y KEY_3
@@ -77,13 +110,24 @@ Emails válidos destacados del sector alimentos:
 - `afonseca@bydsa.com` (Botanas y Derivados), `administracion@empacadoralahuerta.com`
 - `anhuerta@sigma-alimentos.com` (Sigma Alimentos)
 
+### 📊 Estado de la BD al 2026-04-16
+
+| Métrica | Valor |
+|---------|-------|
+| Total leads | **23,364** |
+| Con teléfono | 10,768 |
+| Con email | 9,042 |
+| Email válido (campaign-ready) | **2,128** |
+| Con Facebook | 1,018 |
+| Con Instagram | 668 |
+
 ### 🔜 PENDIENTE
+- Correr `social_enricher.py` en producción para enriquecer leads con redes sociales
 - Crear campaña Instantly.ai con los 72+ emails válidos de manufactura de alimentos
 - Integrar Brevo API para emails personales verificados
 - Activar billing en Google Cloud para GOOGLE_KEY_1 y GOOGLE_KEY_4
 - Crear campañas Instantly.ai para clientes (Pinturas LePront, Goodman Tech, Focus Coach)
 - WhatsApp sender usando Meta Cloud API ($0.0305/msg) — pendiente número registrado
-- Push a GitHub (credenciales PAT pendientes)
 
 ---
 

@@ -5,7 +5,7 @@
 > **Operador:** Gabriel (Zenon) — master del sistema
 > **Stack:** Python 3.14 + Telegram Bot + Google Places API (4 keys) + DENUE/INEGI + Anymail Finder + Claude Haiku + Supabase + Brevo (pendiente)
 > **Plataforma de producción:** Mac Mini `/Users/macmini/LeadForge/` (LaunchAgent con KeepAlive)
-> **Última actualización:** 2026-04-15
+> **Última actualización:** 2026-04-16
 
 ---
 
@@ -107,7 +107,7 @@ el cliente antes de ejecutar. Los leads quedan asociados al cliente seleccionado
 
 ## 🗄️ BASE DE DATOS SUPABASE
 
-### Tabla Principal: `leads_master` (~19,647 leads totales)
+### Tabla Principal: `leads_master` (23,364 leads totales al 2026-04-16)
 
 ```sql
 CREATE TABLE leads_master (
@@ -144,14 +144,27 @@ CREATE TABLE leads_master (
 CREATE UNIQUE INDEX lm_dedup ON leads_master(nombre_negocio, ciudad, cliente_id);
 ```
 
-### Estado de AnymailFinder (2026-03-24)
+### Estado de la BD (2026-04-16)
 
-| Cliente | Total | Procesados | Pendientes | Válidos |
-|---|---|---|---|---|
-| SQB | ~10,095 | ~3,528 | ~6,567 | ~1,279 |
-| b8e2f4d6 | ~6,641 | ~3,011 | ~3,630 | ~356 |
-| Zenon Admin | ~2,911 | ~449 | ~2,462 | 0 |
-| **TOTAL** | **~19,647** | **~6,988** | **~12,659** | **~1,635** |
+| Métrica | Valor |
+|---------|-------|
+| Total leads | **23,364** |
+| Con teléfono | 10,768 |
+| Con email | 9,042 |
+| **Email válido (campaign-ready)** | **2,128** |
+| Con Facebook | 1,018 |
+| Con Instagram | 668 |
+
+### Estado de AnymailFinder (2026-04-16)
+
+| Cliente | Total | Emails válidos |
+|---|---|---|
+| SQB | ~10,095 | ~1,279 |
+| b8e2f4d6 | ~6,641 | ~356 |
+| Zenon Admin + alimentos | ~6,628 | ~493 |
+| **TOTAL** | **~23,364** | **~2,128** |
+
+Créditos Anymail disponibles: ~17,484 (al 2026-04-16)
 
 ### Otras Tablas
 
@@ -499,8 +512,10 @@ Uso: `/denue [estado] [categoría]`
 │   ├── apify_scraper.py          ← Legado — Google Maps vía Apify (bloqueado por facturas)
 │   ├── denue_enricher.py         ← DENUE/INEGI — SECTORES_DENUE + ingestar_sector()
 │   ├── anymail_enricher.py       ← AnymailEnricher — enrich_negocio() + verify_email()
-│   ├── verify_personal_emails.py ← ⭐ NUEVO: verifica emails Gmail/Hotmail/Yahoo de DENUE
+│   ├── verify_personal_emails.py ← verifica emails Gmail/Hotmail/Yahoo de DENUE
 │   │                               Usa verify-email (no find-email). Canal → "brevo"
+│   ├── social_enricher.py        ← ⭐ NUEVO: extrae Facebook/Instagram/TikTok/WhatsApp/LinkedIn
+│   │                               Visita sitio web de cada lead y actualiza leads_master
 │   ├── lead_scorer.py            ← LeadSignals + calculate_lead_score() + get_recommended_channels()
 │   ├── supabase_client.py        ← get_db(), insert_lead_master(), get_leads_stats()
 │   │                               get_all_pending_leads_anymail(), get_leads_con_email_sin_verificar()
@@ -583,4 +598,4 @@ Tarea: [DESCRIBE TU TAREA]
 
 ---
 
-*Última actualización: 2026-04-15 — Google Places API (4 keys) + 89 leads alimentarios Monterrey + Track emails personales (Brevo) + verify_personal_emails.py*
+*Última actualización: 2026-04-16 — Google Places API producción: 1,267 leads/19 ciudades a $0 + social_enricher.py + BD: 23,364 leads, 2,128 emails válidos*
