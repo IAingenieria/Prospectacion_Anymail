@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LeadForge — LaunchAgent para Mac Mini
+  ======================================
+  Inicia todo el sistema automáticamente cuando el Mac Mini arranca.
+
+  INSTALACIÓN:
+    1. Edita la ruta en ProgramArguments (busca /Users/TU_USUARIO)
+    2. Copia este archivo:
+       cp mac_autostart/com.leadforge.system.plist ~/Library/LaunchAgents/
+    3. Carga el agente:
+       launchctl load ~/Library/LaunchAgents/com.leadforge.system.plist
+    4. Verificar que está corriendo:
+       launchctl list | grep leadforge
+
+  DESINSTALACIÓN:
+    launchctl unload ~/Library/LaunchAgents/com.leadforge.system.plist
+    rm ~/Library/LaunchAgents/com.leadforge.system.plist
+
+  VER LOGS:
+    tail -f /Users/TU_USUARIO/leadforge/logs/stdout.log
+    tail -f /Users/TU_USUARIO/leadforge/logs/stderr.log
+-->
+<plist version="1.0">
+<dict>
+
+  <!-- Identificador único del servicio -->
+  <key>Label</key>
+  <string>com.leadforge.system</string>
+
+  <!-- Comando a ejecutar: Python del entorno virtual + start_all.py -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/TU_USUARIO/leadforge/venv/bin/python</string>
+    <string>/Users/TU_USUARIO/leadforge/start_all.py</string>
+    <string>--port</string>
+    <string>5000</string>
+    <string>--webhook-port</string>
+    <string>8001</string>
+  </array>
+
+  <!-- Directorio de trabajo -->
+  <key>WorkingDirectory</key>
+  <string>/Users/TU_USUARIO/leadforge</string>
+
+  <!-- Variables de entorno adicionales (el .env ya maneja las APIs) -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+    <key>PYTHONDONTWRITEBYTECODE</key>
+    <string>1</string>
+  </dict>
+
+  <!-- Reiniciar automáticamente si el proceso muere -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Arrancar al hacer login (no en boot del sistema) -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Esperar 5 segundos antes de reiniciar si falla -->
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <!-- Logs de salida -->
+  <key>StandardOutPath</key>
+  <string>/Users/TU_USUARIO/leadforge/logs/stdout.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/TU_USUARIO/leadforge/logs/stderr.log</string>
+
+  <!-- Prioridad baja para no competir con el sistema -->
+  <key>ProcessType</key>
+  <string>Background</string>
+
+</dict>
+</plist>

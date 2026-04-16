@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>LeadForge — Diagrama de Flujo</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    body { background: #1a1a2e; display: flex; flex-direction: column; align-items: center; padding: 30px; font-family: sans-serif; }
+    h2 { color: #fff; margin-bottom: 20px; }
+    .mermaid { background: #fff; border-radius: 12px; padding: 30px; max-width: 1200px; width: 100%; }
+    .btn { margin-top: 20px; padding: 12px 28px; background: #6c5ce7; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+    .btn:hover { background: #a29bfe; }
+  </style>
+</head>
+<body>
+  <h2>LeadForge / ZenonFinder — Diagrama de Flujo</h2>
+
+  <div class="mermaid">
+flowchart TD
+    U["Usuario - Zenon\nTelegram"]
+
+    subgraph TG["Bot - telegram_bot.py"]
+        B1["handle_free_text"]
+        B2["parse_finder_intent\nClaude Haiku"]
+        B3["expand_search_terms\n8-9 categorias"]
+        B4["Confirmacion /si o /no"]
+        B5["cmd_si\ncreate_task run_all"]
+        B1 --> B2 --> B3 --> B4 -->|/si| B5
+    end
+
+    subgraph PL["Pipeline - pipeline.py"]
+        P1{"Cache?\nbusquedas_cache"}
+        P2["ApifyScraper\nscrape_multi_term"]
+        P3{"Anymail\ndisponible?"}
+        P4["process_negocio x N\nasyncio.gather"]
+        P5["save_search_cache"]
+        CACHED["Retorna leads cacheados"]
+        P1 -->|REUSE| CACHED
+        P1 -->|SCRAPE| P2
+        P2 --> P3
+        P3 --> P4
+        P4 --> P5
+    end
+
+    subgraph AP["Apify Scraper - apify_scraper.py"]
+        A1["run_actor\nPOST acts/id/runs"]
+        A2["wait_for_completion\npoll 5s - timeout 12min"]
+        A3["get_dataset_items"]
+        A4["parse_item\nNegocioRaw list"]
+        A5["Deduplicar\ntelefono y dominio"]
+        A1 --> A2 -->|SUCCEEDED| A3 --> A4 --> A5
+    end
+
+    subgraph CLOUD["Apify Cloud\ncompass/google-maps-extractor\n4 USD por 1000 lugares"]
+        GM["Google Maps\n1 run - todos los terminos"]
+    end
+
+    subgraph PN["process_negocio"]
+        N1["extract_owner_from_reviews\nregex + Claude Haiku"]
+        N2{"sitio_web o email?"}
+        N3["anymail.enrich_negocio\nAnymail Finder API"]
+        N4["AnymailResult vacio\nroute skip"]
+        N5["validate_company_emails\nstatus - MX - catchall - dedup"]
+        N6["calculate_lead_score\n0 a 100"]
+        N7["insert_lead_master"]
+        N1 --> N2
+        N2 -->|si| N3
+        N2 -->|no| N4
+        N3 --> N5
+        N4 --> N5
+        N5 --> N6 --> N7
+    end
+
+    subgraph SB["Supabase"]
+        T1["leads_master\nnuevo - calificado - contactado\nabierto - respondio - cliente"]
+        T2["busquedas_cache"]
+        V1["Vistas\nembudo_ventas - leads_calientes"]
+        T1 --- V1
+    end
+
+    RESP["Bot responde\nApify N lugares\nEmail leads N\nSocial leads N"]
+
+    U -->|texto libre| B1
+    B5 --> P1
+    P2 --> A1
+    A1 <-->|REST API| GM
+    A5 -->|NegocioRaw list| P4
+    P4 --> N1
+    N7 --> T1
+    P5 --> T2
+    P4 --> RESP
+    RESP --> U
+
+    style CLOUD fill:#f96332,color:#fff
+    style SB fill:#3ecf8e,color:#000
+    style TG fill:#229ed9,color:#fff
+    style PL fill:#6c5ce7,color:#fff
+    style AP fill:#e17055,color:#fff
+    style PN fill:#fdcb6e,color:#333
+  </div>
+
+  <button class="btn" onclick="descargar()">Descargar como PNG</button>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+
+    function descargar() {
+      const svg = document.querySelector('.mermaid svg');
+      if (!svg) { alert('Espera a que cargue el diagrama'); return; }
+      const data = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const w = svg.viewBox.baseVal.width || svg.clientWidth || 1200;
+      const h = svg.viewBox.baseVal.height || svg.clientHeight || 800;
+      canvas.width = w * 2;
+      canvas.height = h * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const img = new Image();
+      const blob = new Blob([data], {type: 'image/svg+xml'});
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const a = document.createElement('a');
+        a.download = 'leadforge_diagrama.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+  </script>
+</body>
+</html>

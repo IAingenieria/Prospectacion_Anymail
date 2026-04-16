@@ -1,0 +1,119 @@
+version: "3.9"
+
+# =============================================================================
+# LEADFORGE — Docker Compose (Producción completa)
+# =============================================================================
+#
+# UN SOLO COMANDO para levantar todo el sistema:
+#   docker-compose up -d
+#
+# Servicios:
+#   leadforge-dashboard  → http://localhost:5000  (dashboard web + API REST)
+#   leadforge-monitor    → Telegram bot + health checker (puerto 8001 webhook)
+#
+# Comandos útiles:
+#   docker-compose up -d                    # Levantar todo en background
+#   docker-compose logs -f                  # Ver todos los logs
+#   docker-compose logs -f leadforge-dashboard  # Solo logs del dashboard
+#   docker-compose ps                       # Ver estado de servicios
+#   docker-compose down                     # Detener todo
+#   docker-compose restart leadforge-monitor    # Reiniciar solo el monitor
+#
+# Ejecutar pipeline manualmente:
+#   docker-compose exec leadforge-dashboard python start_campaign.py \
+#     --config campaign_configs/mi_campana.yaml
+# =============================================================================
+
+networks:
+  leadforge-net:
+    driver: bridge
+
+volumes:
+  leadforge-logs:
+  leadforge-data:
+
+services:
+
+  # ── DASHBOARD WEB (Fase 4) ─────────────────────────────────────────────────
+  leadforge-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: leadforge-dashboard
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - leadforge-logs:/app/logs
+      - leadforge-data:/app/data
+      # Montar código para hot-reload en desarrollo:
+      # - .:/app
+    ports:
+      - "5000:5000"      # Dashboard web
+    networks:
+      - leadforge-net
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - LOG_LEVEL=INFO
+    command: python start_dashboard.py --port 5000 --host 0.0.0.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── MONITOR (Fase 2) ───────────────────────────────────────────────────────
+  leadforge-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: leadforge-monitor
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - leadforge-logs:/app/logs
+      - leadforge-data:/app/data
+    ports:
+      - "8001:8001"    # Webhook de Instantly.ai → Claude analiza respuestas
+    networks:
+      - leadforge-net
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    command: python start_monitor.py
+    depends_on:
+      leadforge-dashboard:
+        condition: service_healthy
+
+  # ── TAREAS PROGRAMADAS (opcional) ────────────────────────────────────────
+  # Corre el pipeline de forma automática en horario definido.
+  # Descomenta si quieres automatización 100% sin CLI.
+  #
+  # leadforge-scheduler:
+  #   build: .
+  #   container_name: leadforge-scheduler
+  #   restart: unless-stopped
+  #   env_file: [.env]
+  #   volumes:
+  #     - leadforge-logs:/app/logs
+  #     - leadforge-data:/app/data
+  #     - ./campaign_configs:/app/campaign_configs
+  #   networks: [leadforge-net]
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     # Cron para ejecutar campaña: "0 9 * * 1-5" = lunes-viernes 9am
+  #     - CAMPAIGN_CRON=0 9 * * 1-5
+  #     - CAMPAIGN_CONFIG=campaign_configs/ejemplo_campana.yaml
+  #   command: >
+  #     sh -c "pip install schedule && python -c \"
+  #     import schedule, time, subprocess
+  #     import os
+  #     cron = os.getenv('CAMPAIGN_CRON', '0 9 * * 1-5')
+  #     config = os.getenv('CAMPAIGN_CONFIG')
+  #     def run(): subprocess.run(['python', 'start_campaign.py', '--config', config])
+  #     schedule.every().day.at('09:00').do(run)
+  #     while True: schedule.run_pending(); time.sleep(60)
+  #     \""
