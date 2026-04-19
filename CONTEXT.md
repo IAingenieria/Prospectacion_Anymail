@@ -412,28 +412,29 @@ Uso: `/denue [estado] [categoría]`
 
 ---
 
-## 📊 ESTADO ACTUAL (2026-04-15)
+## 📊 ESTADO ACTUAL (2026-04-18)
 
 ### ✅ Funcionando
 
 - Bot @ZenonFinder en Mac Mini — LaunchAgent KeepAlive
 - **Google Places API** — reemplazó Apify como fuente de scraping (4 keys, KeyRotator)
 - DENUE/INEGI — fuente primaria gratuita, siempre activa
-- AnymailFinder — lotes de 300, progreso intermedio, ~17,587 créditos disponibles
+- AnymailFinder — lotes de 300, progreso intermedio, ~17,300 créditos disponibles
 - Selector de cliente en `/denue`, `/agregar`, `/si` (ZenonFinder)
 - 5 clientes registrados en tabla `clientes`
 - `/accion` — panel de stats + exportar CSV + calidad
 - `/anymailfinder` — vista por cliente con botones individuales y "Procesar TODOS"
 - Track de emails personales: `verify_personal_emails.py` + status `APROBADO_PERSONAL`
-- 89 leads alimentarios Monterrey NL en Supabase (tortillas, tostadas, frituras, embutidos)
+- `social_enricher.py` — extrae FB/IG/TikTok/WA/LinkedIn de sitios web (1,706 leads enriquecidos)
+- `whatsapp_url` columna activa en `leads_master` — 511 números recopilados
 
 ### ⚠️ Pendiente / Bloqueado
 
 - **Apify bloqueado** — facturas pendientes (ya no es crítico, Google Places lo reemplazó)
 - **Google Keys 1 y 4** — activar billing en Google Cloud Console para goodmantech y esgconsultores
 - **Brevo** — integrar `brevo_sender.py` para emails personales verificados (próximo paso)
-- **WhatsApp Meta API** — construir `whatsapp_sender.py`, 55 leads alimentarios con teléfono esperando
-- **Pinturas LePront, Goodman Tech, Focus Coach** — sin leads todavía
+- **YCloud WhatsApp** — registrar número Business, luego campañas con 511 contactos recopilados
+- **Instantly campañas pendientes** — salones eventos (85 emails), alimentos (72 emails), LePront/Goodman/Focus
 
 ### 📊 Campañas Instantly.ai
 
@@ -443,12 +444,265 @@ Uso: `/denue [estado] [categoría]`
 | Regio Cribas | Activa |
 | Pinturas LePront | Activa |
 | Limpieza / SQB | Activa |
+| Salones de Eventos NL | ⏳ Pendiente — 85 emails válidos listos |
+| Manufactura Alimentos NE/TAM/COAH | ⏳ Pendiente — 72 emails válidos listos |
+
+---
+
+## 🔧 HISTORIAL DE CAMBIOS EN CÓDIGO
+
+> Documentación de todos los cambios implementados desde el commit inicial (2026-04-02).
+> Ordenado por archivo, de más reciente a más antiguo.
+
+---
+
+### `social_enricher.py` (raíz del proyecto)
+**Creado:** 2026-04-16 | **Fix crítico:** 2026-04-18
+
+Script standalone para enriquecer `leads_master` con redes sociales scrapeando el sitio web de cada negocio.
+
+**Funciones principales:**
+```python
+extract_social_from_html(html, base_url) -> SocialResult   # regex sobre HTML completo
+fetch_website(url) -> (html, error)                         # GET con retry SSL→HTTP
+get_leads_pendientes(sb, limite, cliente_id) -> list        # leads con web sin redes
+update_lead_social(sb, lead_id, social) -> bool             # UPDATE en Supabase
+procesar_leads(limite, cliente_id)                          # loop principal
+```
+
+**Patrones regex detectados:** `facebook.com`, `fb.com/me`, `instagram.com`, `instagr.am`, `tiktok.com/@`, `wa.me`, `api.whatsapp.com/send`, `linkedin.com/company`, `youtube.com/@`
+
+**Fix 2026-04-18 — Bug crítico:** `to_dict()` no incluía `whatsapp_url` → los WhatsApp detectados se perdían sin error.
+
+```python
+# ANTES (bug silencioso):
+def to_dict(self) -> dict:
+    return {k: v for k, v in {
+        "facebook_url":  self.facebook_url,
+        "instagram_url": self.instagram_url,
+    }.items() if v is not None}
+
+# DESPUÉS (correcto):
+def to_dict(self) -> dict:
+    return {k: v for k, v in {
+        "facebook_url":  self.facebook_url,
+        "instagram_url": self.instagram_url,
+        "whatsapp_url":  self.whatsapp_url,   # ← agregado
+    }.items() if v is not None}
+```
+
+**Nota operativa:** Supabase limita queries a 1,000 filas → se necesitan múltiples runs en loop hasta tasa ~0%.
+
+---
+
+### `leadforge/google_places_scraper.py`
+**Creado:** 2026-04-15 — reemplaza `apify_scraper.py` como fuente de scraping
+
+**Clases:**
+
+| Clase | Descripción |
+|---|---|
+| `NegocioRaw` | dataclass con campos: nombre, teléfono, sitio_web, facebook_url, instagram_url, rating, reviews_text, raw_data, tiene_email (property), tiene_telefono (property) |
+| `KeyRotator` | Carga hasta 9 keys desde `.env` (`GOOGLE_KEY_1..9`). `get_key()` rota round-robin. `mark_exhausted(key)` la saca del pool. `status()` muestra conteos. |
+| `GooglePlacesScraper` | Scraper principal. Llama a Places API New (`/v1/places:searchText`). Paginación con `nextPageToken`. Parsea dirección, teléfono, website, coordenadas, horarios. |
+
+**Métodos clave:**
+```python
+check_credits() -> dict          # retorna {"ok": True} si hay keys activas
+scrape_multi_term(                # acepta AMBAS firmas:
+    location, max_places,         #   firma pipeline.py (Monterrey NL MX, 100)
+    ciudad, estado, max_per_term  #   firma directa (Monterrey, NL, 12)
+) -> list[NegocioRaw]
+_scrape_term(term, location, ...)  # una búsqueda + paginación
+_parse_place(place_dict) -> NegocioRaw  # extrae campos del JSON de Places API
+```
+
+**Bugs corregidos durante desarrollo:**
+- `nextPageToken` en FieldMask tenía prefijo `places.` incorrecto → causa 400 INVALID_ARGUMENT → fix: campo top-level
+- Error 403 causaba `break` (detenía loop) → fix: `mark_exhausted` + `continue` (rota a siguiente key)
+
+**Alias de compatibilidad:**
+```python
+ApifyScraper = GooglePlacesScraper  # pipeline.py importa ApifyScraper
+```
+
+---
+
+### `leadforge/pipeline.py`
+**Modificado:** 2026-04-15
+
+**Cambio principal — import del scraper:**
+```python
+# ANTES:
+from .apify_scraper import ApifyScraper, NegocioRaw
+# AHORA:
+from .google_places_scraper import ApifyScraper, NegocioRaw
+```
+
+**Nuevos imports de supabase_client:**
+```python
+from .supabase_client import (
+    ...
+    update_lead_apify_data,        # enriquece lead DENUE con datos Apify
+    get_leads_con_sitio_web,       # lista leads con sitio_web para Anymail
+    update_lead_anymail_verificado,
+    update_lead_score,
+)
+```
+
+**`PipelineStats` refactorizado** — contadores anteriores eliminados, nuevos:
+
+| Campo nuevo | Descripción |
+|---|---|
+| `denue_negocios` | Total leads traídos de DENUE |
+| `denue_con_email` | De esos, cuántos traían email DENUE |
+| `apify_nuevos` | Negocios Apify no presentes en DENUE |
+| `apify_actualizados` | Leads DENUE enriquecidos con datos Apify |
+| `apify_sin_creditos` | Bool — Apify falló por billing |
+| `leads_verificados` | Leads con email válido confirmado por Anymail |
+| `leads_5_estrellas` | Campaign-ready (calidad_stars = 5) |
+| `total_insertados` | Total guardados en Supabase |
+
+**Función renombrada:** `process_negocio` → `_insert_negocio`
+
+---
+
+### `leadforge/supabase_client.py`
+**Modificado:** 2026-04-15
+
+Funciones **nuevas** agregadas (no existían en commit inicial):
+
+| Función | Descripción |
+|---|---|
+| `update_lead_apify_data(nombre, ciudad, cliente_id, facebook_url, instagram_url, rating, review_count, sitio_web_apify, telefono_apify, email_apify, apify_run_id)` | Enriquece un lead DENUE con datos de Apify/Google Places. Regla: redes sociales siempre se actualizan; sitio_web/teléfono/email solo si DENUE no los tenía. Cross-check de sitios web discrepantes al log. |
+| `get_leads_con_sitio_web(cliente_id, limit)` | Leads con `sitio_web IS NOT NULL` y `verificado=False` — input para Anymail Fase 1 |
+| `update_lead_anymail_verificado(nombre_negocio, ciudad, cliente_id, email, email_status, hierarchy_score, lead_score, calidad_stars, canal_recomendado)` | Marca `verificado=True`, guarda email y calidad. Dispara subida a Instantly si `calidad_stars >= 4`. |
+| `update_lead_email_personal_verificado(lead_id, email, email_status, canal)` | Para emails personales (Gmail/Hotmail) verificados. Marca `verificado=True`, `canal_recomendado="brevo"`. |
+| `update_lead_score(nombre_negocio, ciudad, cliente_id, lead_score, calidad_stars)` | Actualiza score numérico y clasificación en estrellas. |
+| `get_leads_stats(cliente_id)` | Retorna dict: total, con_web, con_email, verificados, cinco_estrellas, con_web_sin_verificar |
+| `get_all_pending_leads_anymail(cliente_id, limit=300)` | Fase 1: leads con sitio_web, `verificado=False` |
+| `get_anymail_stats_por_cliente()` | Stats por cliente con paginación completa (evita límite 1,000 Supabase) |
+| `get_leads_con_email_sin_verificar(cliente_id, limit=300)` | Fase 2: leads con email DENUE, sin sitio_web, `anymail_procesado=False` |
+
+---
+
+### `leadforge/validation_cascade.py`
+**Modificado:** 2026-04-15
+
+**Cambios:**
+
+1. Nuevo estado en enum `ValidationStatus`:
+```python
+APROBADO_PERSONAL = "aprobado_personal"  # Gmail/Hotmail → canal Brevo (no Instantly)
+```
+
+2. Nuevo set de dominios personales:
+```python
+DOMINIOS_PERSONALES = {
+    "gmail.com", "hotmail.com", "hotmail.com.mx",
+    "yahoo.com", "yahoo.com.mx", "yahoo.es",
+    "outlook.com", "outlook.com.mx",
+    "live.com", "live.com.mx",
+    "icloud.com", "me.com",
+    "protonmail.com", "pm.me",
+}
+```
+
+3. Nueva property en `ValidationResult`:
+```python
+@property
+def es_apto_para_brevo(self) -> bool:
+    return self.status == ValidationStatus.APROBADO_PERSONAL
+```
+
+4. **Nivel 2.5** en cascada de validación (entre niveles 2 y 3):
+   - Si el dominio del email está en `DOMINIOS_PERSONALES` → `APROBADO_PERSONAL`
+   - No pasa por Anymail Finder (inútil para Gmail)
+   - Canal asignado: `"brevo"` en vez de `"instantly"`
+
+---
+
+### `leadforge/verify_personal_emails.py`
+**Creado:** 2026-04-15 (archivo nuevo)
+
+Script para verificar emails personales (Gmail/Hotmail/etc) que vienen de DENUE y nunca pasaron por Anymail Finder.
+
+**Flujo:**
+1. Lee leads con email personal + `anymail_procesado=False` de `leads_master`
+2. Llama a endpoint `anymail verify-email` (0.1 créditos, no 1 crédito)
+3. Si `valid` → `verificado=True`, `canal_recomendado="brevo"`
+4. Si `invalid` → `anymail_procesado=True`, `verificado=False`
+
+**Funciones:**
+```python
+_verificar_email(client, email, semaphore) -> str      # llama verify-email
+get_personal_leads_pendientes(db, cliente_id) -> list  # leads con email personal sin verificar
+procesar_emails_personales(cliente_id, limit) -> dict  # loop principal
+```
+
+---
+
+### `leadforge/denue_enricher.py`
+**Modificado:** 2026-04-15
+
+**Nuevos sectores agregados** a `SECTORES_DENUE`:
+
+| Clave | SCIAN | Descripción |
+|---|---|---|
+| `parques_industriales` | 53/531 | Parques, zonas y corredores industriales |
+| `manufactura` | 31 | Maquiladoras, plantas industriales |
+| `quimica` | 32/325 | Empresas químicas, limpieza industrial |
+
+---
+
+### `leadforge/apify_scraper.py`
+**Modificado:** 2026-04-15
+
+Método nuevo agregado:
+```python
+async def check_credits(self) -> dict:
+    """
+    Verifica presupuesto disponible en cuenta Apify.
+    Retorna {"ok": True} o {"ok": False, "error": "..."}.
+    Retorna ok=False si used >= 95% del límite mensual.
+    """
+```
+Esto permite que `pipeline.py` verifique créditos antes de lanzar scraping y muestre advertencia si Apify está bloqueado.
+
+---
+
+### Migraciones SQL (`migrations/`)
+
+| Archivo | Fecha | Cambios |
+|---|---|---|
+| `004_rfc_social_fuente.sql` | 2026-04-16 | `rfc TEXT`, `fuente TEXT DEFAULT 'denue'`, `facebook_url`, `instagram_url`, `whatsapp TEXT` (campo legacy), `canal_recomendado TEXT` + índices |
+| `005_social_web_fields.sql` | 2026-04-02 | `linkedin_url`, `twitter_url`, `tiktok_url`, `youtube_url`, `email_enriched_at TIMESTAMPTZ` + índices |
+| SQL manual (2026-04-18) | 2026-04-18 | `whatsapp_url TEXT` — columna nueva para URLs `wa.me/` (distinta del campo legacy `whatsapp` de migración 004) |
+
+> **Nota:** `whatsapp` (migración 004) es el campo de número legacy. `whatsapp_url` (2026-04-18) es la URL completa `https://wa.me/52...` para YCloud.
 
 ---
 
 ## 🐛 BUGS CORREGIDOS (HISTORIAL)
 
-### Sesión 2026-03-24 (Mac Mini)
+### Sesión 2026-04-18
+
+| # | Bug | Archivo | Fix |
+|---|---|---|---|
+| 1 | `whatsapp_url` detectado pero no guardado en BD | `social_enricher.py` | Agregado a `to_dict()` — campo faltaba silenciosamente |
+| 2 | `whatsapp_url` column doesn't exist en Supabase | DB | `ALTER TABLE leads_master ADD COLUMN IF NOT EXISTS whatsapp_url TEXT` ejecutado en dashboard |
+
+### Sesión 2026-04-15 (Google Places)
+
+| # | Bug | Archivo | Fix |
+|---|---|---|---|
+| 1 | `nextPageToken` en FieldMask causaba 400 INVALID_ARGUMENT | `google_places_scraper.py` | Movido a campo top-level (no anidado bajo `places.*`) |
+| 2 | Error 403 Apify key causaba `break` → detenía loop | `google_places_scraper.py` | Cambiado a `mark_exhausted(key)` + `continue` |
+| 3 | `process_negocio` AttributeError (`email_leads_insertados`) | `pipeline.py` | Función renombrada a `_insert_negocio`, contadores refactorizados |
+| 4 | Anymail llamaba a leads sin sitio_web | `pipeline.py` | Skip explícito si `not negocio.sitio_web` |
+| 5 | `get_leads_stats()` devolvía máx 1,000 (límite Supabase) | `supabase_client.py` | `get_anymail_stats_por_cliente()` usa COUNT aggregation, no select rows |
+
+### Sesión 2026-03-24 (Mac Mini setup)
 
 | # | Bug | Fix |
 |---|---|---|
@@ -478,11 +732,11 @@ Uso: `/denue [estado] [categoría]`
 ## ❌ PENDIENTES
 
 ### Alta Prioridad
-1. **Integrar Brevo** — `brevo_sender.py` para emails personales verificados (Gmail/Hotmail válidos)
+1. **Integrar Brevo** — `brevo_sender.py` para emails personales verificados (Gmail/Hotmail — `verify_personal_emails.py` ya los detecta, falta el sender)
 2. **Activar billing Google Cloud** — keys GOOGLE_KEY_1 (goodmantech) y GOOGLE_KEY_4 (esgconsultores)
-3. **WhatsApp Meta API** — `whatsapp_sender.py` para 55 leads alimentarios con teléfono
-4. **Crear campañas Instantly** para Pinturas LePront, Goodman Tech, Focus Coach
-5. **Leads para nuevos clientes** — ejecutar `/denue` o pipeline por estado/categoría
+3. **YCloud WhatsApp** — registrar número Business, luego campañas con 511 contactos en `whatsapp_url`
+4. **Crear campañas Instantly** — salones eventos NL (85 emails), manufactura alimentos (72 emails)
+5. **Leads para nuevos clientes** — ejecutar pipeline para Pinturas LePront, Goodman Tech, Focus Coach
 
 ### Media Prioridad
 6. **Pagar facturas Apify** — ya no crítico (Google Places lo reemplazó), pero desbloquea actor de social media
@@ -507,18 +761,18 @@ Uso: `/denue [estado] [categoría]`
 │   ├── config.py                 ← Configuración desde .env
 │   ├── pipeline.py               ← run_pipeline() — orquestador principal
 │   │                               ⚠️ Importa desde google_places_scraper (no apify_scraper)
-│   ├── google_places_scraper.py  ← ⭐ NUEVO: Google Places API — reemplaza Apify
-│   │                               KeyRotator (hasta 9 keys GOOGLE_KEY_N)
-│   │                               check_credits() + scrape_multi_term(location, max_places)
+│   ├── google_places_scraper.py  ← ⭐ 2026-04-15: Google Places API — reemplaza Apify
+│   │                               KeyRotator (hasta 9 keys GOOGLE_KEY_N, round-robin)
+│   │                               check_credits() + scrape_multi_term(location/ciudad/estado)
 │   │                               ApifyScraper = GooglePlacesScraper (alias compatibilidad)
 │   ├── apify_scraper.py          ← Legado — Google Maps vía Apify (bloqueado por facturas)
 │   ├── denue_enricher.py         ← DENUE/INEGI — SECTORES_DENUE + ingestar_sector()
 │   ├── anymail_enricher.py       ← AnymailEnricher — enrich_negocio() + verify_email()
-│   ├── verify_personal_emails.py ← verifica emails Gmail/Hotmail/Yahoo de DENUE
-│   │                               Usa verify-email (no find-email). Canal → "brevo"
-│   ├── social_enricher.py        ← extrae Facebook/Instagram/TikTok/WhatsApp/LinkedIn
-│   │                               Visita sitio web de cada lead y actualiza leads_master
-│   │                               ⚠️ Fix 2026-04-18: to_dict() ahora incluye whatsapp_url
+│   ├── verify_personal_emails.py ← ⭐ 2026-04-15: verifica emails Gmail/Hotmail/Yahoo de DENUE
+│   │                               Usa verify-email (0.1 créditos, no find-email)
+│   │                               Si válido → verificado=True, canal_recomendado="brevo"
+├── social_enricher.py            ← ⭐ 2026-04-16: extrae FB/IG/TikTok/WA/LinkedIn de sitios web
+│                                   Fix 2026-04-18: to_dict() incluye whatsapp_url
 │   ├── lead_scorer.py            ← LeadSignals + calculate_lead_score() + get_recommended_channels()
 │   ├── supabase_client.py        ← get_db(), insert_lead_master(), get_leads_stats()
 │   │                               get_all_pending_leads_anymail(), get_leads_con_email_sin_verificar()
