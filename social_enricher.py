@@ -123,6 +123,7 @@ class SocialResult:
         return {k: v for k, v in {
             "facebook_url":  self.facebook_url,
             "instagram_url": self.instagram_url,
+            "whatsapp_url":  self.whatsapp_url,
         }.items() if v is not None}
 
 

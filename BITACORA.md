@@ -2,6 +2,119 @@
 
 ---
 
+## 📅 2026-04-18 — Sesión: Social Enricher en producción + Salones de Eventos + WhatsApp
+
+### CONTEXTO DE LA SESIÓN
+- Corrida completa de `social_enricher.py` sobre todos los leads con sitio web (5 loops)
+- Búsqueda de Salones de Eventos en 10 ciudades NL + Anymail enrichment
+- Fix crítico en `social_enricher.py`: `whatsapp_url` no se guardaba en BD (faltaba en `to_dict()`)
+- Extracción masiva de WhatsApp: 511 números recopilados en 4 runs
+- Columna `whatsapp_url` agregada a `leads_master` en Supabase
+
+### ✅ social_enricher.py — 5 runs en producción
+
+| Run | Procesados | Con redes | Tasa |
+|-----|-----------|-----------|------|
+| 0 | 675 | 349 | 52% |
+| 1 | 633 | 190 | 30% |
+| 2 | 601 | 104 | 17% |
+| 3 | 586 | 41 | 7% |
+| 4 | 567 | 9 | 1.6% |
+| **Total** | **3,062** | **693 nuevos** | — |
+
+- Antes: 1,018 leads con FB. Después: **1,706 leads con redes sociales**
+- Rendimiento típico decreciente (igual que Anymail batch)
+
+### ✅ BÚSQUEDA — Salones de Eventos NL (10 ciudades)
+
+**Términos (10):** salon de eventos, centro de convenciones, salon de bodas, salon de quince años, salon de fiestas, centro social, jardín de eventos, hacienda para eventos, banquetes, salon de graduaciones
+
+| Ciudad | Leads |
+|--------|-------|
+| Monterrey | ~55 |
+| Guadalupe | ~54 |
+| Santa Catarina | ~55 |
+| General Escobedo | ~55 |
+| Apodaca | ~54 |
+| San Pedro Garza García | ~55 |
+| Cadereyta Jiménez | ~55 |
+| Allende | ~55 |
+| Montemorelos | ~55 |
+| Santiago | ~52 |
+| **TOTAL** | **~545** |
+
+### ✅ ANYMAIL — Salones de Eventos
+
+| Etapa | Resultado |
+|-------|----------|
+| Leads con sitio web | ~150 |
+| Emails encontrados (Ruta A — find_by_company) | 99 |
+| Válidos encontrados directamente | 14 |
+| Verificados como valid (verify-email) | **85** |
+| Inválidos | 1 |
+| Unknown (no confirmados) | 25 |
+
+### ✅ Fix social_enricher.py — whatsapp_url
+
+`to_dict()` no incluía `whatsapp_url` → los WhatsApp detectados se perdían silenciosamente.
+
+```python
+# ANTES:
+def to_dict(self) -> dict:
+    return {k: v for k, v in {
+        "facebook_url":  self.facebook_url,
+        "instagram_url": self.instagram_url,
+    }.items() if v is not None}
+
+# DESPUÉS:
+def to_dict(self) -> dict:
+    return {k: v for k, v in {
+        "facebook_url":  self.facebook_url,
+        "instagram_url": self.instagram_url,
+        "whatsapp_url":  self.whatsapp_url,
+    }.items() if v is not None}
+```
+
+SQL ejecutado en Supabase dashboard:
+```sql
+ALTER TABLE leads_master ADD COLUMN IF NOT EXISTS whatsapp_url TEXT;
+```
+
+### ✅ WhatsApp Extractor — 4 runs
+
+| Run | Procesados | Con WhatsApp | Tasa |
+|-----|-----------|-------------|------|
+| 1 | 1,000 | 371 | 37% |
+| 2 | 1,000 | 96 | 9% |
+| 3 | 1,000 | 38 | 3% |
+| 4 | 1,000 | 6 | 0% |
+| **Total** | **4,000 visits** | **511 números** | — |
+
+- Método: httpx async (10 concurrentes), 5 regex patterns para wa.me / api.whatsapp.com
+- Preparado para integración con YCloud (WhatsApp Business messaging)
+
+### 📊 Estado de la BD al 2026-04-18
+
+| Métrica | Valor |
+|---------|-------|
+| Total leads | ~23,900 |
+| Con teléfono | ~11,000 |
+| Con email | ~9,600 |
+| Email válido (campaign-ready) | **~2,300** |
+| Con Facebook | ~1,706 |
+| Con Instagram | ~1,100 |
+| Con WhatsApp | **511** |
+
+### 🔜 PENDIENTE
+- Commit y push `social_enricher.py` fix a GitHub develop
+- Integrar Brevo API para emails personales (Gmail/Hotmail verificados)
+- Activar billing en Google Cloud para GOOGLE_KEY_1 y GOOGLE_KEY_4
+- Crear campañas Instantly.ai: salones eventos (85+ emails), manufactura alimentos (72+ emails)
+- YCloud WhatsApp Business: registrar número y lanzar campañas con 511 contactos
+- Campañas clientes: Pinturas LePront, Goodman Tech, Focus Coach
+
+---
+
 ## 📅 2026-04-16 — Sesión: Reemplazo Apify → Google Places API + Expansión regional
 
 ### CONTEXTO DE LA SESIÓN

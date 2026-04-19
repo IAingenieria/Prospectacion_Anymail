@@ -5,7 +5,7 @@
 > **Operador:** Gabriel (Zenon) — master del sistema
 > **Stack:** Python 3.14 + Telegram Bot + Google Places API (4 keys) + DENUE/INEGI + Anymail Finder + Claude Haiku + Supabase + Brevo (pendiente)
 > **Plataforma de producción:** Mac Mini `/Users/macmini/LeadForge/` (LaunchAgent con KeepAlive)
-> **Última actualización:** 2026-04-16
+> **Última actualización:** 2026-04-18
 
 ---
 
@@ -81,7 +81,7 @@ lsof -i :8001 | grep LISTEN
 | Base de datos | Supabase (PostgreSQL) | Proyecto "Generacion de Leads" |
 | Email outreach (corporativo) | Instantly.ai | Dominios IONOS calentados — solo emails corporativos |
 | Email outreach (personal) | **Brevo** | ⏳ Pendiente integrar — Gmail/Hotmail/Yahoo verificados |
-| WhatsApp outreach | **Meta Cloud API** | ⏳ Pendiente — leads con teléfono sin email |
+| WhatsApp outreach | **YCloud** | ⏳ Pendiente — 511 leads con whatsapp_url recopilados |
 | Monitoreo | APScheduler | Health checks cada 30 min |
 
 ---
@@ -107,7 +107,7 @@ el cliente antes de ejecutar. Los leads quedan asociados al cliente seleccionado
 
 ## 🗄️ BASE DE DATOS SUPABASE
 
-### Tabla Principal: `leads_master` (23,364 leads totales al 2026-04-16)
+### Tabla Principal: `leads_master` (~24,000 leads totales al 2026-04-18)
 
 ```sql
 CREATE TABLE leads_master (
@@ -123,6 +123,7 @@ CREATE TABLE leads_master (
   telefono          TEXT,
   facebook_url      TEXT,
   instagram_url     TEXT,
+  whatsapp_url      TEXT,           -- ⭐ 2026-04-18: agregado para integración YCloud
   rating            NUMERIC(3,1),
   review_count      INTEGER DEFAULT 0,
   google_maps_url   TEXT,
@@ -144,18 +145,19 @@ CREATE TABLE leads_master (
 CREATE UNIQUE INDEX lm_dedup ON leads_master(nombre_negocio, ciudad, cliente_id);
 ```
 
-### Estado de la BD (2026-04-16)
+### Estado de la BD (2026-04-18)
 
 | Métrica | Valor |
 |---------|-------|
-| Total leads | **23,364** |
-| Con teléfono | 10,768 |
-| Con email | 9,042 |
-| **Email válido (campaign-ready)** | **2,128** |
-| Con Facebook | 1,018 |
-| Con Instagram | 668 |
+| Total leads | **~24,000** |
+| Con teléfono | ~11,000 |
+| Con email | ~9,600 |
+| **Email válido (campaign-ready)** | **~2,300** |
+| Con Facebook | ~1,706 |
+| Con Instagram | ~1,100 |
+| Con WhatsApp | **511** |
 
-### Estado de AnymailFinder (2026-04-16)
+### Estado de AnymailFinder (2026-04-18)
 
 | Cliente | Total | Emails válidos |
 |---|---|---|
@@ -164,7 +166,7 @@ CREATE UNIQUE INDEX lm_dedup ON leads_master(nombre_negocio, ciudad, cliente_id)
 | Zenon Admin + alimentos | ~6,628 | ~493 |
 | **TOTAL** | **~23,364** | **~2,128** |
 
-Créditos Anymail disponibles: ~17,484 (al 2026-04-16)
+Créditos Anymail disponibles: ~17,300 (al 2026-04-18)
 
 ### Otras Tablas
 
@@ -514,8 +516,9 @@ Uso: `/denue [estado] [categoría]`
 │   ├── anymail_enricher.py       ← AnymailEnricher — enrich_negocio() + verify_email()
 │   ├── verify_personal_emails.py ← verifica emails Gmail/Hotmail/Yahoo de DENUE
 │   │                               Usa verify-email (no find-email). Canal → "brevo"
-│   ├── social_enricher.py        ← ⭐ NUEVO: extrae Facebook/Instagram/TikTok/WhatsApp/LinkedIn
+│   ├── social_enricher.py        ← extrae Facebook/Instagram/TikTok/WhatsApp/LinkedIn
 │   │                               Visita sitio web de cada lead y actualiza leads_master
+│   │                               ⚠️ Fix 2026-04-18: to_dict() ahora incluye whatsapp_url
 │   ├── lead_scorer.py            ← LeadSignals + calculate_lead_score() + get_recommended_channels()
 │   ├── supabase_client.py        ← get_db(), insert_lead_master(), get_leads_stats()
 │   │                               get_all_pending_leads_anymail(), get_leads_con_email_sin_verificar()
@@ -598,4 +601,4 @@ Tarea: [DESCRIBE TU TAREA]
 
 ---
 
-*Última actualización: 2026-04-16 — Google Places API producción: 1,267 leads/19 ciudades a $0 + social_enricher.py + BD: 23,364 leads, 2,128 emails válidos*
+*Última actualización: 2026-04-18 — social_enricher 5 runs: 1,706 redes sociales | Salones NL: 545 leads + 85 emails válidos | WhatsApp: 511 números recopilados | BD: ~24,000 leads, ~2,300 emails válidos*
