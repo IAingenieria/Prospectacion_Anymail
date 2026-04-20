@@ -26,16 +26,188 @@ USO (idéntico al original):
 """
 
 import asyncio
+import json
 import logging
 import os
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 logger = logging.getLogger(__name__)
+
+# ─── GUARDIÁN DE COSTOS ───────────────────────────────────────────────────────
+
+_PRICE_PER_REQ_USD = 0.032           # Google Places Text Search (USD por request)
+_FREE_CREDIT_USD   = 200.0           # Crédito gratuito mensual por cuenta Google
+_MXN_PER_USD       = float(os.getenv("MXN_PER_USD", "18.0"))
+_MAX_REQ_PER_RUN   = int(os.getenv("GOOGLE_MAX_REQ_PER_RUN",   "500"))   # ~$16 USD
+_MAX_REQ_PER_MONTH = int(os.getenv("GOOGLE_MAX_REQ_PER_MONTH", "5000"))  # ~$160 USD
+_USAGE_FILE        = Path(__file__).parent.parent / "logs" / "google_usage.json"
+
+
+class CostGuard:
+    """
+    Rastrea el uso de Google Places API para evitar cargos inesperados.
+
+    Dos niveles de protección:
+      1. Por corrida   (memoria): GOOGLE_MAX_REQ_PER_RUN   default 500  (~$16 USD)
+      2. Por mes (JSON en disco): GOOGLE_MAX_REQ_PER_MONTH default 5000 (~$160 USD)
+
+    Al 90% → aviso en logs (una sola vez por key).
+    Al 100% → key marcada agotada, scraping se detiene.
+    """
+
+    def __init__(self):
+        self._run_usage: dict[str, int] = {}   # key → requests exitosas esta corrida
+        self._monthly: dict = self._load_monthly()
+        self._save_counter = 0
+        self._warned: set[str] = set()         # evitar warnings repetidos
+
+    # ── Persistencia ─────────────────────────────────────────────────────────
+
+    def _load_monthly(self) -> dict:
+        try:
+            if _USAGE_FILE.exists():
+                with open(_USAGE_FILE, "r") as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {}
+
+    def _save_monthly(self):
+        """Persiste conteos. Mantiene solo los últimos 3 meses."""
+        try:
+            _USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            meses = sorted(self._monthly.keys())
+            for old in meses[:-3]:
+                del self._monthly[old]
+            with open(_USAGE_FILE, "w") as f:
+                json.dump(self._monthly, f, indent=2)
+        except Exception as e:
+            logger.warning(f"⚠️  CostGuard: no se pudo guardar {_USAGE_FILE}: {e}")
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _suffix(key: str) -> str:
+        return f"...{key[-8:]}"
+
+    def _month_key(self) -> str:
+        return datetime.now().strftime("%Y-%m")
+
+    def _run_count(self, key: str) -> int:
+        return self._run_usage.get(key, 0)
+
+    def _monthly_count(self, key: str) -> int:
+        return self._monthly.get(self._month_key(), {}).get(self._suffix(key), 0)
+
+    # ── API pública ───────────────────────────────────────────────────────────
+
+    def can_request(self, key: str) -> tuple[bool, str]:
+        """Verifica límites ANTES de hacer la request. No modifica contadores."""
+        run_c = self._run_count(key)
+        mon_c = self._monthly_count(key)
+
+        if run_c >= _MAX_REQ_PER_RUN:
+            return False, f"límite por corrida ({run_c}/{_MAX_REQ_PER_RUN} req)"
+        if mon_c >= _MAX_REQ_PER_MONTH:
+            return False, f"límite mensual ({mon_c}/{_MAX_REQ_PER_MONTH} req)"
+
+        # Avisos al 90% (una sola vez por key)
+        if run_c >= _MAX_REQ_PER_RUN * 0.9:
+            wk = f"run_{self._suffix(key)}"
+            if wk not in self._warned:
+                self._warned.add(wk)
+                logger.warning(
+                    f"⚠️  CostGuard: {self._suffix(key)} al "
+                    f"{run_c//_MAX_REQ_PER_RUN*100:.0f}% del límite por corrida "
+                    f"({run_c}/{_MAX_REQ_PER_RUN})"
+                )
+        if mon_c >= _MAX_REQ_PER_MONTH * 0.9:
+            wk = f"mon_{self._suffix(key)}"
+            if wk not in self._warned:
+                self._warned.add(wk)
+                cost = mon_c * _PRICE_PER_REQ_USD
+                logger.warning(
+                    f"⚠️  CostGuard: {self._suffix(key)} al "
+                    f"{mon_c//_MAX_REQ_PER_MONTH*100:.0f}% del límite mensual "
+                    f"({mon_c}/{_MAX_REQ_PER_MONTH} | ~${cost:.2f} USD)"
+                )
+
+        return True, ""
+
+    def register(self, key: str):
+        """Registra una request exitosa (HTTP 200). Llama DESPUÉS de cada 200."""
+        self._run_usage[key] = self._run_usage.get(key, 0) + 1
+
+        month  = self._month_key()
+        suffix = self._suffix(key)
+        if month not in self._monthly:
+            self._monthly[month] = {}
+        self._monthly[month][suffix] = self._monthly[month].get(suffix, 0) + 1
+
+        self._save_counter += 1
+        if self._save_counter % 50 == 0:
+            self._save_monthly()
+
+    def summary(self) -> str:
+        """Resumen ASCII de uso y costos."""
+        month = self._month_key()
+        lines = [
+            f"\n{'═'*58}",
+            f"  📊 USO GOOGLE PLACES API  —  {month}",
+            f"{'─'*58}",
+        ]
+
+        if not self._run_usage:
+            lines.append("  Sin requests registradas en esta corrida.")
+        else:
+            lines.append(
+                f"  {'KEY':<16}  {'CORRIDA':>8}  {'MES':>8}  {'COSTO MES':>10}"
+            )
+            lines.append(f"  {'─'*16}  {'─'*8}  {'─'*8}  {'─'*10}")
+
+            for key in sorted(self._run_usage.keys()):
+                suf   = self._suffix(key)
+                run_c = self._run_count(key)
+                mon_c = self._monthly_count(key)
+                cost  = mon_c * _PRICE_PER_REQ_USD
+                bar_r = self._bar(run_c, _MAX_REQ_PER_RUN)
+                bar_m = self._bar(mon_c, _MAX_REQ_PER_MONTH)
+                lines.append(
+                    f"  {suf:<16}  {run_c:>3} {bar_r}  "
+                    f"{mon_c:>5} {bar_m}  ${cost:>6.2f} USD"
+                )
+
+            total_run = sum(self._run_usage.values())
+            total_mon = sum(self._monthly.get(month, {}).values())
+            total_usd = total_mon * _PRICE_PER_REQ_USD
+            total_mxn = total_usd * _MXN_PER_USD
+            lines += [
+                f"{'─'*58}",
+                f"  Esta corrida  : {total_run:,} requests",
+                f"  Total del mes : {total_mon:,} requests",
+                f"  Costo mensual : ${total_usd:.2f} USD  /  ${total_mxn:,.0f} MXN",
+                f"  Crédito libre : ${_FREE_CREDIT_USD - total_usd:.2f} USD restantes",
+            ]
+
+        lines.append(f"{'═'*58}\n")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _bar(value: int, max_value: int, width: int = 8) -> str:
+        if max_value == 0:
+            return f"[{'?'*width}]"
+        pct    = min(value / max_value, 1.0)
+        filled = int(pct * width)
+        sym    = "█" if pct < 0.9 else "▓"
+        return f"[{sym*filled}{'░'*(width-filled)}]{pct*100:3.0f}%"
+
 
 # ─── MODELO DE DATOS (idéntico a NegocioRaw original) ────────────────────────
 
@@ -138,21 +310,34 @@ class GooglePlacesScraper:
     BASE_URL = "https://places.googleapis.com/v1/places:searchText"
 
     def __init__(self):
-        self.rotator = KeyRotator()
-        self.session = requests.Session()
+        self.rotator    = KeyRotator()
+        self.cost_guard = CostGuard()
+        self.session    = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
 
     # ── Verificación de "créditos" (siempre OK mientras haya keys activas) ────
 
     async def check_credits(self) -> dict:
         """
-        Compatibilidad con pipeline.py. Google Places usa keys propias,
-        no hay créditos externos — retorna ok=True si hay al menos una key activa.
+        Compatibilidad con pipeline.py.
+        Retorna ok=True si hay keys activas y no se ha alcanzado el límite mensual.
         """
         status = self.rotator.status()
         if status["activas"] == 0:
             return {"ok": False, "error": "Todas las keys de Google Places están agotadas"}
-        return {"ok": True, "details": status}
+
+        month     = datetime.now().strftime("%Y-%m")
+        monthly   = self.cost_guard._monthly.get(month, {})
+        total_mon = sum(monthly.values())
+        cost_usd  = round(total_mon * _PRICE_PER_REQ_USD, 2)
+
+        return {
+            "ok":                   True,
+            "details":              status,
+            "uso_mensual_req":      total_mon,
+            "costo_mensual_usd":    cost_usd,
+            "credito_restante_usd": round(_FREE_CREDIT_USD - cost_usd, 2),
+        }
 
     # ── Método principal (igual que el original) ──────────────────────────────
 
@@ -238,6 +423,13 @@ class GooglePlacesScraper:
             if not key:
                 break
 
+            # CostGuard: verificar límites antes de consumir la request
+            ok, reason = self.cost_guard.can_request(key)
+            if not ok:
+                logger.warning(f"🛑 CostGuard detuvo key ...{key[-8:]}: {reason}")
+                self.rotator.mark_exhausted(key)
+                break
+
             batch_size = min(20, max_results - fetched)
             payload = {
                 "textQuery": query,
@@ -294,6 +486,9 @@ class GooglePlacesScraper:
                         f"para '{termino}': {response.text[:200]}"
                     )
                     break
+
+                # CostGuard: registrar request cobrada por Google
+                self.cost_guard.register(key)
 
                 data = response.json()
                 places = data.get("places", [])

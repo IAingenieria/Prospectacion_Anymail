@@ -2,6 +2,73 @@
 
 ---
 
+## 📅 2026-04-20 — Sesión: CostGuard Google Places + Nueva Campaña Instantly (Misceláneas/Rutas)
+
+### CONTEXTO DE LA SESIÓN
+- Implementación de `CostGuard` en `google_places_scraper.py` para evitar cargos inesperados en Google Places API
+- Inicio de configuración de campaña Instantly para segmento misceláneas/tienditas con rutas a clientes
+
+### ✅ CostGuard — google_places_scraper.py
+
+Clase nueva agregada para rastrear el uso de la API de Google Places y evitar gastos no planificados.
+
+**Dos niveles de protección:**
+
+| Nivel | Variable `.env` | Default | Costo aprox. |
+|-------|----------------|---------|--------------|
+| Por corrida (memoria) | `GOOGLE_MAX_REQ_PER_RUN` | 500 req | ~$16 USD |
+| Por mes (JSON en disco) | `GOOGLE_MAX_REQ_PER_MONTH` | 5,000 req | ~$160 USD |
+
+**Comportamiento:**
+- Al 90% del límite → warning en logs (una sola vez por key)
+- Al 100% del límite → key marcada agotada con `mark_exhausted()`, scraping se detiene
+- Persiste uso mensual en `logs/google_usage.json` (mantiene últimos 3 meses)
+- `summary()` imprime tabla ASCII con uso por key, costo en USD y MXN
+
+**Integración en GooglePlacesScraper:**
+```python
+# __init__
+self.cost_guard = CostGuard()
+
+# En _scrape_term — ANTES de la request:
+ok, reason = self.cost_guard.can_request(key)
+if not ok:
+    self.rotator.mark_exhausted(key)
+    break
+
+# En _scrape_term — DESPUÉS de HTTP 200:
+self.cost_guard.register(key)
+```
+
+**check_credits() ahora retorna:**
+```python
+{
+    "ok": True,
+    "details": {...},
+    "uso_mensual_req": 120,
+    "costo_mensual_usd": 3.84,
+    "credito_restante_usd": 196.16,
+}
+```
+
+### 🔜 PENDIENTE — Campaña Instantly Misceláneas/Rutas
+
+Segmento objetivo identificado: misceláneas, tienditas, ventas al detalle con rutas a clientes.
+
+**Leads en Supabase (2026-04-20):**
+- Categoría "minisuper": 201 leads, 118 con email válido
+- Categoría "tienda" (industriales/construcción): 39 válidos — NO son el target
+- Categoría "abarrotes": 493 leads, solo 1 válido
+
+**Pendiente confirmar con Zenon:**
+1. ¿Los leads ya están cargados o hay que hacer nueva búsqueda con términos específicos?
+2. ¿Para qué cliente es la campaña?
+3. ¿Cuál es la solución para rutas? (software, servicio, producto)
+4. ¿Nombre del remitente y empresa para el email?
+5. ¿Qué cuentas de Instantly usar?
+
+---
+
 ## 📅 2026-04-18 — Sesión: Social Enricher en producción + Salones de Eventos + WhatsApp
 
 ### CONTEXTO DE LA SESIÓN

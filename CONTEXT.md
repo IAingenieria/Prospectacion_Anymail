@@ -5,7 +5,7 @@
 > **Operador:** Gabriel (Zenon) — master del sistema
 > **Stack:** Python 3.14 + Telegram Bot + Google Places API (4 keys) + DENUE/INEGI + Anymail Finder + Claude Haiku + Supabase + Brevo (pendiente)
 > **Plataforma de producción:** Mac Mini `/Users/macmini/LeadForge/` (LaunchAgent con KeepAlive)
-> **Última actualización:** 2026-04-18
+> **Última actualización:** 2026-04-20
 
 ---
 
@@ -412,12 +412,13 @@ Uso: `/denue [estado] [categoría]`
 
 ---
 
-## 📊 ESTADO ACTUAL (2026-04-18)
+## 📊 ESTADO ACTUAL (2026-04-20)
 
 ### ✅ Funcionando
 
 - Bot @ZenonFinder en Mac Mini — LaunchAgent KeepAlive
 - **Google Places API** — reemplazó Apify como fuente de scraping (4 keys, KeyRotator)
+- **CostGuard** — 2026-04-20: guardián de costos Google Places API (límites por corrida y mensual, persistencia JSON, alertas al 90%)
 - DENUE/INEGI — fuente primaria gratuita, siempre activa
 - AnymailFinder — lotes de 300, progreso intermedio, ~17,300 créditos disponibles
 - Selector de cliente en `/denue`, `/agregar`, `/si` (ZenonFinder)
@@ -446,6 +447,7 @@ Uso: `/denue [estado] [categoría]`
 | Limpieza / SQB | Activa |
 | Salones de Eventos NL | ⏳ Pendiente — 85 emails válidos listos |
 | Manufactura Alimentos NE/TAM/COAH | ⏳ Pendiente — 72 emails válidos listos |
+| Misceláneas / Tienditas (Rutas) | ⏳ Pendiente — definir cliente + copy (2026-04-20) |
 
 ---
 
@@ -496,7 +498,36 @@ def to_dict(self) -> dict:
 ---
 
 ### `leadforge/google_places_scraper.py`
-**Creado:** 2026-04-15 — reemplaza `apify_scraper.py` como fuente de scraping
+**Creado:** 2026-04-15 | **Mejorado:** 2026-04-20 — CostGuard: guardián de costos Google Places API
+
+**CostGuard (2026-04-20):**
+
+Clase nueva agregada al inicio del módulo para rastrear el uso de la API y evitar cargos inesperados.
+
+```python
+class CostGuard:
+    """Dos niveles de protección:
+      1. Por corrida   (memoria): GOOGLE_MAX_REQ_PER_RUN   default 500  (~$16 USD)
+      2. Por mes (JSON en disco): GOOGLE_MAX_REQ_PER_MONTH default 5000 (~$160 USD)
+    Al 90% → aviso en logs. Al 100% → key marcada agotada.
+    Persiste en logs/google_usage.json (últimos 3 meses).
+    """
+```
+
+Variables de entorno que controlan los límites:
+```env
+GOOGLE_MAX_REQ_PER_RUN=500     # máximo de requests por corrida (~$16 USD)
+GOOGLE_MAX_REQ_PER_MONTH=5000  # máximo mensual por key (~$160 USD)
+MXN_PER_USD=18.0               # tipo de cambio para reporte en MXN
+```
+
+Integración en `GooglePlacesScraper`:
+- `__init__` instancia `self.cost_guard = CostGuard()`
+- `_scrape_term()` llama `can_request(key)` antes de cada request y `register(key)` después de cada HTTP 200
+- `check_credits()` ahora retorna también `uso_mensual_req`, `costo_mensual_usd`, `credito_restante_usd`
+- `summary()` imprime tabla ASCII con uso por key, costo USD y MXN
+
+**Creado originalmente 2026-04-15 — reemplaza `apify_scraper.py` como fuente de scraping**
 
 **Clases:**
 
@@ -684,6 +715,14 @@ Esto permite que `pipeline.py` verifique créditos antes de lanzar scraping y mu
 ---
 
 ## 🐛 BUGS CORREGIDOS (HISTORIAL)
+
+### Sesión 2026-04-20
+
+| # | Feature | Archivo | Detalle |
+|---|---|---|---|
+| 1 | CostGuard — guardián de costos Google Places API | `leadforge/google_places_scraper.py` | Clase nueva con protección por corrida (500 req) y mensual (5,000 req). Alertas al 90%, bloqueo al 100%. Persiste en `logs/google_usage.json`. Integrada en `GooglePlacesScraper`: `can_request()` antes de cada HTTP call, `register()` después de cada 200. `check_credits()` ahora incluye costo mensual y crédito restante. |
+
+---
 
 ### Sesión 2026-04-18
 
