@@ -5,7 +5,7 @@
 > **Operador:** Gabriel (Zenon) — master del sistema
 > **Stack:** Python 3.14 + Telegram Bot + Google Places API (4 keys) + DENUE/INEGI + Anymail Finder + Claude Haiku + Supabase + Brevo (pendiente)
 > **Plataforma de producción:** Mac Mini `/Users/macmini/LeadForge/` (LaunchAgent con KeepAlive)
-> **Última actualización:** 2026-04-20
+> **Última actualización:** 2026-04-20 (Sesión B — Clientes Mr Ruta + Salones + AnymailFinder)
 
 ---
 
@@ -88,17 +88,19 @@ lsof -i :8001 | grep LISTEN
 
 ## 👥 CLIENTES REGISTRADOS
 
-Tabla `clientes` en Supabase — 5 clientes activos:
+Tabla `clientes` en Supabase — 7 clientes activos:
 
 | cliente_id (primeros 8) | Nombre | Plan | Leads en DB |
 |---|---|---|---|
 | `d0542bc7` | Zenon — LeadForge Admin | agency | ~2,900 |
 | `c7f3a2b1` | Soluciones Quimicas Biodegradables (SQB) | agency | ~10,400+ |
 | `4610cd20` | Pinturas LePront | growth | 0 (nuevo) |
-| `729c24ce` | Goodman Tech | growth | 0 (nuevo) |
+| `729c24ce` | Goodman Tech | growth | 114 emails válidos |
 | `9024baa2` | Focus Coach | starter | 0 (nuevo) |
+| `be119ffc` | **Mr Ruta** | growth | 999 (sector alimentos, 53 emails válidos) |
+| `9673cf95` | **Salones** | growth | 510 (salones de eventos NL, 24 emails válidos) |
 
-> `b8e2f4d6` — cliente sin nombre en tabla (datos históricos, ~6,641 leads en leads_master)
+> `b8e2f4d6` — cliente sin nombre en tabla (datos históricos, ~539 emails válidos en leads_master)
 
 **Selector de cliente:** Todos los comandos de búsqueda muestran InlineKeyboard para elegir
 el cliente antes de ejecutar. Los leads quedan asociados al cliente seleccionado.
@@ -145,28 +147,31 @@ CREATE TABLE leads_master (
 CREATE UNIQUE INDEX lm_dedup ON leads_master(nombre_negocio, ciudad, cliente_id);
 ```
 
-### Estado de la BD (2026-04-18)
+### Estado de la BD (2026-04-20)
 
 | Métrica | Valor |
 |---------|-------|
-| Total leads | **~24,000** |
-| Con teléfono | ~11,000 |
-| Con email | ~9,600 |
-| **Email válido (campaign-ready)** | **~2,300** |
+| Total leads | **~24,500** |
+| Con teléfono | ~11,500 |
+| Con email | ~9,700 |
+| **Email válido (campaign-ready)** | **2,298** |
 | Con Facebook | ~1,706 |
 | Con Instagram | ~1,100 |
 | Con WhatsApp | **511** |
 
-### Estado de AnymailFinder (2026-04-18)
+### Estado de AnymailFinder (2026-04-20)
 
 | Cliente | Total | Emails válidos |
 |---|---|---|
-| SQB | ~10,095 | ~1,279 |
-| b8e2f4d6 | ~6,641 | ~356 |
-| Zenon Admin + alimentos | ~6,628 | ~493 |
-| **TOTAL** | **~23,364** | **~2,128** |
+| SQB | ~10,095 | 1,084 |
+| b8e2f4d6 (histórico) | ~6,641 | 539 |
+| Zenon Admin | ~2,900 | 561 |
+| Goodman Tech | ~500 | 114 |
+| Mr Ruta | 999 | 53 |
+| Salones | 510 | 24 |
+| **TOTAL** | **~21,645** | **2,298** |
 
-Créditos Anymail disponibles: ~17,300 (al 2026-04-18)
+Créditos Anymail disponibles: **17,373** (al 2026-04-20)
 
 ### Otras Tablas
 
@@ -420,14 +425,15 @@ Uso: `/denue [estado] [categoría]`
 - **Google Places API** — reemplazó Apify como fuente de scraping (4 keys, KeyRotator)
 - **CostGuard** — 2026-04-20: guardián de costos Google Places API (límites por corrida y mensual, persistencia JSON, alertas al 90%)
 - DENUE/INEGI — fuente primaria gratuita, siempre activa
-- AnymailFinder — lotes de 300, progreso intermedio, ~17,300 créditos disponibles
+- AnymailFinder — lotes de 300, progreso intermedio, **17,373 créditos disponibles** (al 2026-04-20)
 - Selector de cliente en `/denue`, `/agregar`, `/si` (ZenonFinder)
-- 5 clientes registrados en tabla `clientes`
+- **7 clientes registrados** en tabla `clientes` (agregados Mr Ruta + Salones el 2026-04-20)
 - `/accion` — panel de stats + exportar CSV + calidad
 - `/anymailfinder` — vista por cliente con botones individuales y "Procesar TODOS"
 - Track de emails personales: `verify_personal_emails.py` + status `APROBADO_PERSONAL`
 - `social_enricher.py` — extrae FB/IG/TikTok/WA/LinkedIn de sitios web (1,706 leads enriquecidos)
 - `whatsapp_url` columna activa en `leads_master` — 511 números recopilados
+- `run_anymail_mr_ruta.py` — script standalone Anymail para cliente Mr Ruta (2026-04-20)
 
 ### ⚠️ Pendiente / Bloqueado
 
@@ -435,7 +441,10 @@ Uso: `/denue [estado] [categoría]`
 - **Google Keys 1 y 4** — activar billing en Google Cloud Console para goodmantech y esgconsultores
 - **Brevo** — integrar `brevo_sender.py` para emails personales verificados (próximo paso)
 - **YCloud WhatsApp** — registrar número Business, luego campañas con 511 contactos recopilados
-- **Instantly campañas pendientes** — salones eventos (85 emails), alimentos (72 emails), LePront/Goodman/Focus
+- **Mr Ruta Instantly** — crear campaña en UI e importar `mr_ruta_instantly.csv` (53 leads listos)
+- **Salones AnymailFinder** — procesar 152 leads con sitio web pendientes de verificar
+- **Mr Ruta + Salones en bot** — agregar ambos clientes al InlineKeyboard selector del bot
+- **Instantly campañas pendientes** — LePront, Goodman Tech, Focus Coach
 
 ### 📊 Campañas Instantly.ai
 
@@ -445,9 +454,9 @@ Uso: `/denue [estado] [categoría]`
 | Regio Cribas | Activa |
 | Pinturas LePront | Activa |
 | Limpieza / SQB | Activa |
-| Salones de Eventos NL | ⏳ Pendiente — 85 emails válidos listos |
-| Manufactura Alimentos NE/TAM/COAH | ⏳ Pendiente — 72 emails válidos listos |
-| Misceláneas / Tienditas (Rutas) | ⏳ Pendiente — definir cliente + copy (2026-04-20) |
+| **Mr Ruta — Sector Alimentos** | ⏳ CSV listo (53 leads) — crear campaña en UI e importar |
+| Salones de Eventos NL | ⏳ Pendiente AnymailFinder (152 webs pendientes) |
+| Misceláneas / Tienditas (Rutas) | ⏳ Pendiente — definir segmento + copy (2026-04-20) |
 
 ---
 

@@ -2,7 +2,101 @@
 
 ---
 
-## 📅 2026-04-20 — Sesión: CostGuard Google Places + Nueva Campaña Instantly (Misceláneas/Rutas)
+## 📅 2026-04-20 — Sesión B: Gestión de Clientes, Reasignación de Leads y AnymailFinder Mr Ruta
+
+### CONTEXTO DE LA SESIÓN
+Desde Claude Code Desktop (Windows): creación de 2 nuevos clientes en Supabase, reasignación de leads históricos a sus clientes correctos, procesamiento AnymailFinder sobre Mr Ruta y generación de CSV para Instantly.
+
+### ✅ Auditoría de emails válidos en Supabase
+
+Consulta directa vía REST API antes de iniciar:
+
+| Cliente | Emails válidos |
+|---|---|
+| SQB | 1,084 |
+| Zenon Admin | 561 |
+| b8e2f4d6 (histórico) | 539 |
+| Goodman Tech | 114 |
+| **TOTAL** | **2,298** |
+
+Canal recomendado de los válidos: `email` (1,378) · `NULL` (686) · `instantly` (155) · `whatsapp` (79)
+
+### ✅ Nuevo cliente: Mr Ruta
+
+- **ID:** `be119ffc-dfc3-431e-9ba7-b44123934258`
+- **Plan:** growth
+- **Segmento:** Sector alimentos — empresas con rutas de distribución a clientes
+
+### ✅ Nuevo cliente: Salones
+
+- **ID:** `9673cf95-c862-465c-9180-98bcf9a0bb87`
+- **Plan:** growth
+- **Segmento:** Salones de eventos, bodas, quinceañeras, jardines, haciendas
+
+### ✅ Reasignación leads → Salones (510 leads)
+
+Leads identificados por `termino_busqueda` conteniendo: salon, eventos, banquetes, quinceanera, jardin de eventos, hacienda para bodas, terraza para eventos, centro social.
+
+| Ciudad | Leads |
+|---|---|
+| Monterrey | 124 |
+| Guadalupe | 74 |
+| Ciudad Apodaca | 61 |
+| Ciudad General Escobedo | 52 |
+| Ciudad Santa Catarina | 48 |
+| Santiago | 33 |
+| Montemorelos | 30 |
+| Cadereyta Jiménez | 24 |
+| San Pedro Garza García | 23 |
+| Ciudad de Allende | 22 |
+
+Estado final Salones: 510 leads · 358 tel · 176 web · 63 email · 24 válidos · 152 pendientes Anymail
+
+### ✅ Reasignación leads → Mr Ruta (999 leads)
+
+Leads identificados por `termino_busqueda` conteniendo: alimento, tortilla, fritura, embutido, tostada, molino, empaque, envasado, procesadora, porcicult, granja, etc.
+
+| Fecha búsqueda | Leads |
+|---|---|
+| 2026-03-14 | 101 |
+| 2026-03-16 | 10 |
+| 2026-03-21 | 57 |
+| 2026-04-16 | 831 |
+
+Estados: Nuevo León (567) · Tamaulipas (255) · Coahuila (171)
+Estado final Mr Ruta: 999 leads · 803 tel · 399 web · 99 email · 53 válidos
+
+### ✅ AnymailFinder — Mr Ruta
+
+Script `run_anymail_mr_ruta.py` creado y ejecutado.
+
+| Fase | Leads | Resultado |
+|---|---|---|
+| Fase 1 (find-email/company por sitio_web) | 331 | 0 emails nuevos |
+| Fase 2 (verify-email DENUE) | 6 | 0 válidos |
+
+- **Créditos usados:** 43
+- **Créditos restantes:** 17,373
+- Resultado esperado: empresas del sector alimentos (tortillerías, carnicerías, frituras) son negocios familiares sin infraestructura de email corporativo — AnymailFinder no puede encontrar emails en esos dominios.
+- Todos marcados `anymail_procesado=True` en Supabase — no se reprocesarán ni cobrarán de nuevo.
+
+**Corrección en script:** endpoint `/find-email/domain` no existe en v5.1 → corregido a `/find-email/company` con `company_name` + `website` opcional. El endpoint acepta ambos parámetros y usa caché (0 créditos si dominio ya fue consultado).
+
+### ✅ CSV para Instantly — Mr Ruta
+
+Archivo generado: `mr_ruta_instantly.csv`
+- 53 leads con `email_status='valid'`
+- Columnas: `first_name`, `last_name`, `email`, `company_name`, `website`, `phone`, `city`, `personalization`
+- Pendiente: crear campaña "Mr Ruta — Sector Alimentos" en Instantly UI e importar CSV
+
+### 🔜 PENDIENTE — Sesión B 2026-04-20
+- Crear campaña en Instantly UI: "Mr Ruta — Sector Alimentos" e importar `mr_ruta_instantly.csv` (53 leads)
+- AnymailFinder sobre Salones: 152 leads con web pendientes (~60-80 emails esperados)
+- Agregar Mr Ruta y Salones al selector de cliente del bot @ZenonFinder (telegram_bot.py)
+
+---
+
+## 📅 2026-04-20 — Sesión A: CostGuard Google Places + Nueva Campaña Instantly (Misceláneas/Rutas)
 
 ### CONTEXTO DE LA SESIÓN
 - Implementación de `CostGuard` en `google_places_scraper.py` para evitar cargos inesperados en Google Places API
